@@ -1,0 +1,49 @@
+# Recording Protocol Configuration
+
+recording:
+  # Video settings
+  video:
+    width: 640
+    height: 480
+    fps: 30
+    codec: "mp4v"
+    format: ".mp4"
+  
+  # Timing settings
+  timing:
+    countdown_seconds: 3
+    recording_seconds: 3
+    rest_between_reps: 1
+  
+  # Display settings
+  display:
+    show_skeleton: true
+    show_countdown: true
+    show_instructions: true
+    mirror_mode: true
+  
+  # File naming convention
+  # Format: {subject_id}_{class_name}_{lighting}_{occlusion}_{rep}.mp4
+  naming:
+    separator: "_"
+    
+  # Quality checks
+  quality:
+    min_frames: 30
+    min_keypoint_confidence: 0.5
+    require_hands_visible: true
+
+# Session protocol
+protocol:
+  # Instructions shown before each class
+  instructions:
+    TOLONG: "Lakukan isyarat TOLONG - angkat tangan dan lambaikan"
+    BAHAYA: "Lakukan isyarat BAHAYA - tangan menyilang di depan"
+    KEBAKARAN: "Lakukan isyarat KEBAKARAN - gerakan api dengan tangan"
+    SAKIT: "Lakukan isyarat SAKIT - tangan memegang bagian tubuh"
+    GEMPA: "Lakukan isyarat GEMPA - gerakan bergetar"
+    BANJIR: "Lakukan isyarat BANJIR - gerakan gelombang air"
+    PENCURI: "Lakukan isyarat PENCURI - gerakan mengambil"
+    PINGSAN: "Lakukan isyarat PINGSAN - gerakan jatuh/lemas"
+    KECELAKAAN: "Lakukan isyarat KECELAKAAN - gerakan tabrakan"
+    DARURAT: "Lakukan isyarat DARURAT - gerakan urgen"

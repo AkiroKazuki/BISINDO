@@ -1,0 +1,63 @@
+# Dataset Configuration
+dataset:
+  classes:
+    - TOLONG
+    - BAHAYA
+    - KEBAKARAN
+    - SAKIT
+    - GEMPA
+    - BANJIR
+    - PENCURI
+    - PINGSAN
+    - KECELAKAAN
+    - DARURAT
+  num_subjects: 12
+  reps_per_condition: 15
+  lighting_conditions: ["bright", "medium", "dark"]
+  occlusion_conditions: ["none", "partial"]
+  
+# Keypoint Configuration
+keypoints:
+  use_pose: true
+  use_hands: true
+  use_face: false  # Disabled for privacy
+  num_pose_landmarks: 33
+  num_hand_landmarks: 21
+  total_landmarks: 75  # 33 pose + 21*2 hands
+  
+# Model Configuration
+model:
+  type: "tcn"
+  input_dim: 225  # 75 landmarks * 3 (x, y, visibility)
+  hidden_dim: 128
+  num_classes: 10
+  num_layers: 4
+  kernel_size: 3
+  dropout: 0.3
+  use_attention: true
+  
+# Training Configuration
+training:
+  batch_size: 16
+  learning_rate: 0.001
+  epochs: 30
+  early_stopping_patience: 5
+  sequence_length: 30  # frames
+  device: "mps"  # Apple Silicon
+  
+# Augmentation Configuration
+augmentation:
+  enabled: true
+  brightness_range: [0.6, 1.4]
+  blur_probability: 0.2
+  horizontal_flip: true
+  time_warp: true
+  time_warp_range: [0.8, 1.2]
+  noise_std: 0.02
+  dropout_prob: 0.1
+
+# Inference Configuration
+inference:
+  confidence_threshold: 0.7
+  smoothing_window: 5
+  fps_target: 25
