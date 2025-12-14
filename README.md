@@ -2,7 +2,7 @@
 
 Sistem Deteksi Isyarat Darurat BISINDO Berbasis Skeleton-Graph Menggunakan Arsitektur TCN yang Tahan Terhadap Variasi Pencahayaan dan Oklusi Parsial.
 
-## 🎯 Overview
+## Overview
 
 Sistem real-time untuk mendeteksi 10 isyarat darurat dalam Bahasa Isyarat Indonesia (BISINDO) menggunakan:
 - **MediaPipe Holistic** untuk ekstraksi skeleton
@@ -10,7 +10,7 @@ Sistem real-time untuk mendeteksi 10 isyarat darurat dalam Bahasa Isyarat Indone
 - **Temporal Convolutional Network (TCN)** untuk pemodelan temporal
 - **PyTorch** dengan akselerasi MPS (Apple Silicon)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 BISINDO/
@@ -29,7 +29,7 @@ BISINDO/
 └── tests/            # Unit tests
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
@@ -63,7 +63,7 @@ python scripts/train.py --config config/default.yaml
 python scripts/demo.py --model checkpoints/best_model.pt
 ```
 
-## 📊 Dataset
+## Dataset
 
 | Parameter | Value |
 |-----------|-------|
@@ -87,13 +87,13 @@ python scripts/demo.py --model checkpoints/best_model.pt
 9. KECELAKAAN - Accident
 10. DARURAT - General emergency
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Input Video → MediaPipe → Keypoints → Graph Encoder → TCN → Attention → Classification
 ```
 
-## 📈 Performance Targets
+## Performance Targets
 
 | Metric | Target |
 |--------|--------|
@@ -103,12 +103,12 @@ Input Video → MediaPipe → Keypoints → Graph Encoder → TCN → Attention 
 | Inference FPS | ≥ 15 |
 | Model Size | ≤ 200 MB |
 
-## 📝 License
+## License
 
 This project is for educational purposes (Science Fair Project).
 But everyone is free to use it. Please credit me if you use it.
-[MIT License](LICENSE)
+[MIT License](LICENSE.md)
 
-## 👤 Author
+## Author
 
 Gung Wah (Akiro Kazuki)
