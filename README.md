@@ -106,7 +106,9 @@ Input Video → MediaPipe → Keypoints → Graph Encoder → TCN → Attention 
 ## 📝 License
 
 This project is for educational purposes (Science Fair Project).
+But everyone is free to use it. Please credit me if you use it.
+[MIT License](LICENSE)
 
 ## 👤 Author
 
-SMA 3 DPS - Kartul Kelas 11
+Gung Wah (Akiro Kazuki)
