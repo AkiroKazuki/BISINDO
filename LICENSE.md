@@ -1,3 +1,5 @@
+# MIT License
+
 MIT License
 
 Copyright (c) 2026 Gung Wah (Akiro Kazuki)
