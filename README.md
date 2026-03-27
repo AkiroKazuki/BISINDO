@@ -57,4 +57,4 @@ Sistem menyediakan alat evaluasi otomatis:
 Proyek ini dibuat untuk tujuan edukasi (Karya Tulis Ilmiah). Silakan gunakan secara bebas dengan mencantumkan kredit.
 
 ---
-**Author**: Gung Wah (Akiro Kazuki) - Kelompok Anomali, SMA Negeri 3 Denpasar
+**Authors**: Gung Wah, Chelsea, Anin (Kelompok Anomali) - SMA Negeri 3 Denpasar
