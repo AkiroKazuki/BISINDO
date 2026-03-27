@@ -1,4 +1,4 @@
-# BISINDO Emergency Sign Language Detection System (ST-GCN)
+# PENGEMBANGAN SISTEM DETEKSI ISYARAT DARURAT BISINDO BERBASIS ARSITEKTUR ST-GCN DENGAN PENGUJIAN KETAHANAN TERHADAP OKLUSI PARSIAL
 
 Sistem Deteksi Isyarat Darurat BISINDO (Bahasa Isyarat Indonesia) menggunakan arsitektur **Spatial-Temporal Graph Convolutional Network (ST-GCN)**. Sistem ini dirancang untuk mendeteksi isyarat darurat secara real-time dengan efisiensi tinggi dan biaya operasional Rp 0.
 

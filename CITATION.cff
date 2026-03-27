@@ -5,7 +5,7 @@ authors:
   alias: "Akiro Kazuki"
 - given-names: "Chelsea"
 - given-names: "Anin"
-title: "BISINDO Emergency Sign Language Detection System (ST-GCN)"
+title: "PENGEMBANGAN SISTEM DETEKSI ISYARAT DARURAT BISINDO BERBASIS ARSITEKTUR ST-GCN DENGAN PENGUJIAN KETAHANAN TERHADAP OKLUSI PARSIAL"
 version: 1.0.0
 date-released: 2026-03-27
 url: "https://github.com/AkiroKazuki/BISINDO"

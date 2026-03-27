@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 
 # FastAPI app
 app = FastAPI(
-    title="BISINDO Emergency Detection API",
-    description="Real-time sign language emergency detection using ST-GCN",
+    title="Sistem Deteksi Isyarat Darurat BISINDO (ST-GCN)",
+    description="PENGEMBANGAN SISTEM DETEKSI ISYARAT DARURAT BISINDO BERBASIS ARSITEKTUR ST-GCN DENGAN PENGUJIAN KETAHANAN TERHADAP OKLUSI PARSIAL",
     version="1.0.0"
 )
 
