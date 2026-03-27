@@ -108,16 +108,16 @@ def run_dropout_evaluation():
 
     device = torch.device("cuda" if torch.cuda.is_available() else
                           "mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"🖥  Device: {device}")
+    print(f"Device: {device}")
 
     # Load model
     model = load_best_model(device)
-    print("✓ Model loaded")
+    print("Model loaded")
 
     # Load test set (original only)
     loaders = create_dataloaders(include_augmented=False)
     test_loader = loaders['test']
-    print(f"📊 Test set: {len(test_loader.dataset)} samples")
+    print(f"Test set: {len(test_loader.dataset)} samples")
 
     # Evaluate at each dropout rate
     results = {}
@@ -129,7 +129,7 @@ def run_dropout_evaluation():
 
     for rate in DROPOUT_RATES:
         n_drop = int(np.floor(rate * NUM_KEYPOINTS))
-        print(f"\n🔄 Dropout rate: {rate:.0%} ({n_drop}/{NUM_KEYPOINTS} keypoints)")
+        print(f"\nDropout rate: {rate:.0%} ({n_drop}/{NUM_KEYPOINTS} keypoints)")
 
         accuracies = []
         for seed in range(NUM_SEEDS):
@@ -162,7 +162,7 @@ def run_dropout_evaluation():
     plot_degradation(results)
 
     print(f"\n{'='*60}")
-    print("✓ Dropout evaluation complete!")
+    print("Dropout evaluation complete!")
     print(f"  Results saved to: {OUTPUT_DIR}/")
 
 
@@ -182,7 +182,7 @@ def save_table(results):
                 f"{data['std_accuracy']:.4f}",
                 f"{data['dar']:.2f}"
             ])
-    print(f"  → Table saved to {csv_path}")
+    print(f"  Table saved to {csv_path}")
 
 
 def plot_degradation(results):
@@ -220,7 +220,7 @@ def plot_degradation(results):
     path = os.path.join(OUTPUT_DIR, "dropout_degradation.png")
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  → Plot saved to {path}")
+    print(f"  Plot saved to {path}")
 
 
 if __name__ == "__main__":

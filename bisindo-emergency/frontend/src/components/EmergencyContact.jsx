@@ -153,9 +153,9 @@ export default function EmergencyContact({ prediction }) {
                  notifyStatus === 'error' ? 'var(--accent-red)' :
                  'var(--accent-yellow)',
         }}>
-          {notifyStatus === 'sending' && '📡 Mengirim notifikasi...'}
-          {notifyStatus === 'sent' && '✅ Notifikasi terkirim!'}
-          {notifyStatus === 'error' && '❌ Gagal mengirim notifikasi'}
+          {notifyStatus === 'sending' && ' Mengirim notifikasi...'}
+          {notifyStatus === 'sent' && ' Notifikasi terkirim!'}
+          {notifyStatus === 'error' && ' Gagal mengirim notifikasi'}
         </div>
       )}
     </div>

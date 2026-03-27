@@ -59,7 +59,7 @@ export default function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>🤟 BISINDO Emergency Detection</h1>
+        <h1>BISINDO Emergency Detection</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             {isConnected ? 'Backend Connected' : 'Disconnected'}

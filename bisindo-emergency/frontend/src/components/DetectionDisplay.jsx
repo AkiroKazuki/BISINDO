@@ -11,17 +11,17 @@
 export default function DetectionDisplay({ prediction }) {
   const getStatus = () => {
     if (!prediction) {
-      return { label: 'Mendeteksi...', icon: '🔍', className: 'detecting' }
+      return { label: 'Mendeteksi...', icon: '', className: 'detecting' }
     }
 
     if (prediction.in_cooldown) {
-      return { label: 'Notifikasi Terkirim', icon: '✅', className: 'sent' }
+      return { label: 'Notifikasi Terkirim', icon: '', className: 'sent' }
     }
 
     if (prediction.is_confirmed) {
       return {
         label: `DARURAT — ${prediction.class}`,
-        icon: '🚨',
+        icon: '',
         className: 'emergency'
       }
     }
@@ -29,16 +29,16 @@ export default function DetectionDisplay({ prediction }) {
     if (prediction.class && prediction.class !== 'NO_MODEL') {
       return {
         label: `Terdeteksi: ${prediction.class}`,
-        icon: '⚡',
+        icon: '',
         className: 'detected'
       }
     }
 
     if (!prediction.buffer_full) {
-      return { label: 'Mengumpulkan frame...', icon: '⏳', className: 'detecting' }
+      return { label: 'Mengumpulkan frame...', icon: '', className: 'detecting' }
     }
 
-    return { label: 'Mendeteksi...', icon: '🔍', className: 'detecting' }
+    return { label: 'Mendeteksi...', icon: '', className: 'detecting' }
   }
 
   const status = getStatus()
