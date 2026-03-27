@@ -1,8 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software in your research or Karya Tulis Ilmiah, please cite it as follows."
 authors:
-- family-names: "Wah"
-  given-names: "Gung"
+- given-names: "Gung Wah"
   alias: "Akiro Kazuki"
 - given-names: "Chelsea"
 - given-names: "Anin"
