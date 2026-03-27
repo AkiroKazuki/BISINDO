@@ -15,20 +15,27 @@ env/
 *.swo
 .DS_Store
 
+# Environment variables (API keys — NEVER push)
+.env
+
 # Data files (too large for git)
-data/raw/
-data/processed/
-data/splits/
+dataset/raw/
+dataset/processed/
 
 # Model checkpoints (large files)
-checkpoints/
+ml/checkpoints/
 *.pt
 *.pth
 *.onnx
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
 # Logs
 logs/
 *.log
+training_log.csv
 
 # Jupyter
 .ipynb_checkpoints/
@@ -38,12 +45,6 @@ logs/
 .coverage
 htmlcov/
 
-# Local config
-.python-version
-
 # Temporary files
 *.tmp
 *.temp
-
-karyatulis/
-implementation/

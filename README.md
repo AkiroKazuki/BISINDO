@@ -1,114 +1,60 @@
-# BISINDO Emergency Sign Detection System
+# BISINDO Emergency Sign Language Detection System (ST-GCN)
 
-Sistem Deteksi Isyarat Darurat BISINDO Berbasis Skeleton-Graph Menggunakan Arsitektur TCN yang Tahan Terhadap Variasi Pencahayaan dan Oklusi Parsial.
+Sistem Deteksi Isyarat Darurat BISINDO (Bahasa Isyarat Indonesia) menggunakan arsitektur **Spatial-Temporal Graph Convolutional Network (ST-GCN)**. Sistem ini dirancang untuk mendeteksi isyarat darurat secara real-time dengan efisiensi tinggi dan biaya operasional Rp 0.
 
-## Overview
+## Fitur Utama
 
-Sistem real-time untuk mendeteksi 10 isyarat darurat dalam Bahasa Isyarat Indonesia (BISINDO) menggunakan:
-- **MediaPipe Holistic** untuk ekstraksi skeleton
-- **Skeleton-Graph Encoding** untuk representasi spasial
-- **Temporal Convolutional Network (TCN)** untuk pemodelan temporal
-- **PyTorch** dengan akselerasi MPS (Apple Silicon)
+- **Akurasi Tinggi**: Menggunakan ST-GCN 10-block untuk menangkap fitur spasial (skeleton) dan temporal (gerakan).
+- **Real-time Inference**: Integrasi MediaPipe Holistic di browser dengan backend FastAPI (WebSocket).
+- **Notifikasi Multi-Channel**: Mendukung SMS (via Textbee.dev), Panggilan Suara (via Twilio), dan Web Push Notification.
+- **Aesthetic UI**: Antarmuka berbasis React/Vite dengan desain premium dark-mode dan visualisasi skeleton.
+- **Robustness**: Diuji terhadap variasi pencahayaan dan oklusi menggunakan teknik data augmentation dan keypoint dropout.
 
-## Project Structure
+## Struktur Proyek
 
 ```
-BISINDO/
-├── config/           # Configuration files
-├── data/             # Dataset directory
-├── src/              # Source code
-│   ├── data/         # Data processing modules
-│   ├── models/       # Model architectures
-│   ├── training/     # Training utilities
-│   ├── inference/    # Inference pipeline
-│   └── utils/        # Helper utilities
-├── scripts/          # Executable scripts
-├── notebooks/        # Jupyter notebooks
-├── checkpoints/      # Model checkpoints
-├── logs/             # Training logs
-└── tests/            # Unit tests
+bisindo-emergency/
+├── ml/             # ML Pipeline (Graph, Model, Train, Evaluate)
+├── backend/        # FastAPI Server, Inference, Notifications
+├── frontend/       # React + Vite + MediaPipe UI
+└── utils/          # Shared Normalization Logic
 ```
 
-## Quick Start
+## Persiapan & Instalasi
 
-### Installation
-
+### 1. Backend & ML
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On macOS/Linux
-
-# Install dependencies
+cd bisindo-emergency
 pip install -r requirements.txt
 ```
 
-### Data Collection
-
+### 2. Frontend
 ```bash
-# Start recording session
-python scripts/record_data.py --subject S01 --class TOLONG
+cd bisindo-emergency/frontend
+npm install
 ```
 
-### Training
+## Penggunaan
 
-```bash
-# Train model
-python scripts/train.py --config config/default.yaml
-```
+### Langkah 1: Pelatihan Model
+1. Letakkan video dataset di `bisindo-emergency/dataset/raw/`.
+2. Ekstraksi keypoints: `python -m ml.extract_keypoints`
+3. Split data: `python -m ml.dataset`
+4. Augmentasi: `python -m ml.augment`
+5. Training: `python -m ml.train`
 
-### Demo
+### Langkah 2: Menjalankan Sistem
+1. Jalankan Backend: `uvicorn backend.main:app --port 8000`
+2. Jalankan Frontend: `cd frontend && npm run dev`
+3. Buka browser di `http://localhost:5173`
 
-```bash
-# Run real-time demo
-python scripts/demo.py --model checkpoints/best_model.pt
-```
+## Evaluasi
+Sistem menyediakan alat evaluasi otomatis:
+- `python -m ml.evaluate`: Menghasilkan Confusion Matrix, F1-Score, dan grafik pelatihan.
+- `python -m ml.evaluate_dropout`: Menguji redundansi skeleton terhadap kehilangan keypoint (DAR).
 
-## Dataset
+## Lisensi
+Proyek ini dibuat untuk tujuan edukasi (Karya Tulis Ilmiah). Silakan gunakan secara bebas dengan mencantumkan kredit.
 
-| Parameter | Value |
-|-----------|-------|
-| Classes | 10 emergency signs |
-| Subjects | 12 |
-| Reps/Subject | 15 |
-| Lighting | 3 conditions |
-| Occlusion | 2 conditions |
-| Total Samples | ~10,800 |
-
-### Classes
-
-1. TOLONG - Help request
-2. BAHAYA - Danger warning
-3. KEBAKARAN - Fire
-4. SAKIT - Sick/Medical emergency
-5. GEMPA - Earthquake
-6. BANJIR - Flood
-7. PENCURI - Thief/Robber
-8. PINGSAN - Unconscious
-9. KECELAKAAN - Accident
-10. DARURAT - General emergency
-
-## Architecture
-
-```
-Input Video → MediaPipe → Keypoints → Graph Encoder → TCN → Attention → Classification
-```
-
-## Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| Accuracy (normal) | ≥ 90% |
-| Accuracy (low light) | ≥ 80% |
-| Accuracy (occluded) | ≥ 75% |
-| Inference FPS | ≥ 15 |
-| Model Size | ≤ 200 MB |
-
-## License
-
-This project is for educational purposes (Science Fair Project).
-But everyone is free to use it. Please credit me if you use it.
-[MIT License](LICENSE.md)
-
-## Author
-
-Gung Wah (Akiro Kazuki)
+---
+**Author**: Gung Wah (Akiro Kazuki) - Kelompok Anomali, SMA Negeri 3 Denpasar

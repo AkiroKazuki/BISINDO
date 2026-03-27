@@ -1,0 +1,30 @@
+# Core ML
+torch>=2.0.0
+torchvision
+mediapipe>=0.10.0
+numpy
+scikit-learn
+scipy
+
+# Web Framework
+fastapi
+uvicorn[standard]
+websockets
+python-multipart
+
+# Notifications
+requests
+twilio
+pywebpush
+python-dotenv
+
+# Computer Vision
+opencv-python>=4.8.0
+
+# Visualization
+matplotlib
+seaborn
+tqdm
+
+# Development
+pytest>=7.3.0
