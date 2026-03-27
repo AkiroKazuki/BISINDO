@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software in your research or Karya Tulis Ilmiah, please cite it as follows."
+authors:
+- family-names: "Wah"
+  given-names: "Gung"
+  alias: "Akiro Kazuki"
+title: "BISINDO Emergency Sign Language Detection System (ST-GCN)"
+version: 1.0.0
+date-released: 2026-03-27
+url: "https://github.com/AkiroKazuki/BISINDO"
+repository-code: "https://github.com/AkiroKazuki/BISINDO"
+keywords:
+  - BISINDO
+  - Sign Language Detection
+  - ST-GCN
+  - MediaPipe
+  - Emergency Alert
+  - Karya Tulis Ilmiah
+  - Indonesia
