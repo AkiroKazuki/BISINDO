@@ -4,6 +4,8 @@ authors:
 - family-names: "Wah"
   given-names: "Gung"
   alias: "Akiro Kazuki"
+- given-names: "Chelsea"
+- given-names: "Anin"
 title: "BISINDO Emergency Sign Language Detection System (ST-GCN)"
 version: 1.0.0
 date-released: 2026-03-27
