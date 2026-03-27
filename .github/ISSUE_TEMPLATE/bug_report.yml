@@ -1,0 +1,27 @@
+name: Bug Report
+description: Melaporkan kesalahan teknis atau masalah dalam sistem.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Terima kasih telah melaporkan bug! Berikan informasi sebanyak mungkin.
+  - type: textarea
+    id: description
+    attributes:
+      label: Deskripsi Masalah
+      description: Apa yang terjadi?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Langkah untuk Mereproduksi
+      description: Beritahu kami bagaimana cara memunculkan bug tersebut.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Lingkungan Sistem
+      description: Versi OS, Browser, Python, dll.

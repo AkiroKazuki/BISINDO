@@ -45,5 +45,7 @@ htmlcov/
 *.tmp
 *.temp
 
+# Documentations & Templates (Ignored)
 karyatulis/
 implementation/
+Template Extended Abstract 2025.docx.pdf

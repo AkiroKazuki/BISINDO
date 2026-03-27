@@ -1,0 +1,16 @@
+name: Feature Request
+description: Sarankan fitur baru atau peningkatan untuk sistem BISINDO.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: vision
+    attributes:
+      label: Deskripsi Fitur
+      description: Fitur apa yang ingin Anda tambahkan?
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Alasan / Nilai Tambah
+      description: Mengapa fitur ini penting?
