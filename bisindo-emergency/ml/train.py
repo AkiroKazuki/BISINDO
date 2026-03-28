@@ -102,17 +102,17 @@ def train():
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else
                           "mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"🖥  Device: {device}")
+    print(f"Device: {device}")
 
     # Data
-    print("📊 Loading data...")
+    print("Loading data...")
     loaders = create_dataloaders(batch_size=CONFIG["batch_size"])
     print(f"  Train: {len(loaders['train'].dataset)} samples")
     print(f"  Val:   {len(loaders['val'].dataset)} samples")
     print(f"  Test:  {len(loaders['test'].dataset)} samples")
 
     # Model
-    print("\n🧠 Building model...")
+    print("\nBuilding model...")
     A = build_adjacency_matrix().to(device)
     model = STGCN(num_classes=CONFIG["num_classes"], A=A).to(device)
     total_params = sum(p.numel() for p in model.parameters())
@@ -143,7 +143,7 @@ def train():
     best_val_accuracy = 0.0
     patience_counter = 0
 
-    print(f"\n🚀 Starting training (max {CONFIG['max_epochs']} epochs)...\n")
+    print(f"\nStarting training (max {CONFIG['max_epochs']} epochs)...\n")
 
     for epoch in range(1, CONFIG["max_epochs"] + 1):
         start_time = time.time()
@@ -184,21 +184,21 @@ def train():
                 'val_accuracy': val_accuracy,
                 'val_loss': val_loss,
             }, checkpoint_path)
-            print(f"  ★ New best model saved (val_acc: {val_accuracy:.2%})")
+            print(f"  [BEST] New best model saved (val_acc: {val_accuracy:.2%})")
         else:
             patience_counter += 1
 
         # Early stopping
         if patience_counter >= CONFIG["early_stopping_patience"]:
-            print(f"\n⏹  Early stopping at epoch {epoch} "
+            print(f"\nEarly stopping at epoch {epoch} "
                   f"(no improvement for {CONFIG['early_stopping_patience']} epochs)")
             break
 
         # Warning signs
         if epoch == 30 and val_accuracy < 0.40:
-            print("\n⚠ WARNING: Val accuracy < 40% after 30 epochs.")
-            print("  → Check normalization consistency first!")
-            print("  → Are the .npy files correctly shaped (60, 75, 3)?")
+            print("\nWARNING: Val accuracy < 40% after 30 epochs.")
+            print("  Check normalization consistency first!")
+            print("  Are the .npy files correctly shaped (60, 75, 3)?")
 
     log_file.close()
 
@@ -210,7 +210,7 @@ def train():
     print(f"  Training log:     {CONFIG['log_file']}")
 
     # Evaluate on test set with best model
-    print(f"\n📊 Evaluating best model on test set...")
+    print(f"\nEvaluating best model on test set...")
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint['model_state_dict'])
     test_loss, test_accuracy = evaluate(model, loaders['test'], criterion, device)

@@ -4,15 +4,17 @@
  * Stores contacts in localStorage. When a gesture is confirmed,
  * contacts are used for SMS/voice notification via the backend.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const STORAGE_KEY = 'emergency_contacts'
+const NOTIFICATION_COOLDOWN_MS = 12000 // slightly longer than backend's 10s cooldown
 
 export default function EmergencyContact({ prediction }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [contacts, setContacts] = useState([])
   const [notifyStatus, setNotifyStatus] = useState(null)
+  const notificationSentRef = useRef(false)
 
   // Load contacts from localStorage on mount
   useEffect(() => {
@@ -53,12 +55,15 @@ export default function EmergencyContact({ prediction }) {
     saveContacts(contacts.filter(c => c.id !== id))
   }
 
-  // Trigger notifications when gesture is confirmed
+  // Trigger notifications when gesture is confirmed (guarded by ref to prevent duplicates)
   useEffect(() => {
-    if (prediction?.is_confirmed && prediction?.class && contacts.length > 0) {
+    if (prediction?.is_confirmed && prediction?.class
+        && contacts.length > 0 && !notificationSentRef.current) {
+      notificationSentRef.current = true
       triggerNotifications(prediction.class)
+      setTimeout(() => { notificationSentRef.current = false }, NOTIFICATION_COOLDOWN_MS)
     }
-  }, [prediction?.is_confirmed])
+  }, [prediction?.is_confirmed, prediction?.class])
 
   const triggerNotifications = async (gesture) => {
     setNotifyStatus('sending')
@@ -128,7 +133,7 @@ export default function EmergencyContact({ prediction }) {
               onClick={() => handleDelete(contact.id)}
               aria-label={`Hapus ${contact.name}`}
             >
-              ✕
+              x
             </button>
           </div>
         ))}

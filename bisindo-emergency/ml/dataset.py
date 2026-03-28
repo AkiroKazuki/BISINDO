@@ -90,12 +90,12 @@ def generate_splits():
     file_paths, labels = collect_original_files()
 
     if len(file_paths) == 0:
-        print("✗ No processed .npy files found.")
+        print("No processed .npy files found.")
         print(f"  Looking in: {os.path.abspath(PROCESSED_DIR)}")
         print("  Run `python -m ml.extract_keypoints` first.")
         sys.exit(1)
 
-    print(f"📊 Found {len(file_paths)} original samples across {len(CLASSES)} classes")
+    print(f"Found {len(file_paths)} original samples across {len(CLASSES)} classes")
 
     # First split: train (70%) vs temp (30%)
     train_files, temp_files, train_labels, temp_labels = train_test_split(
@@ -141,7 +141,7 @@ def generate_splits():
     with open(SPLIT_FILE, 'w') as f:
         json.dump(split_info, f, indent=2)
 
-    print(f"\n✓ Splits saved to {SPLIT_FILE}")
+    print(f"\nSplits saved to {SPLIT_FILE}")
     print(f"  Train: {len(train_files)} original + {len(train_aug_files)} augmented "
           f"= {len(train_files) + len(train_aug_files)}")
     print(f"  Val:   {len(val_files)} (original only)")
@@ -165,7 +165,7 @@ def load_splits(include_augmented: bool = True) -> dict:
         Dict with 'train', 'val', 'test' keys, each containing (files, labels).
     """
     if not os.path.exists(SPLIT_FILE):
-        print(f"✗ Split file not found: {SPLIT_FILE}")
+        print(f"Split file not found: {SPLIT_FILE}")
         print("  Run `python -m ml.dataset` first.")
         sys.exit(1)
 
@@ -213,14 +213,14 @@ def verify_splits():
     """Verify the integrity of saved splits."""
     splits = load_splits(include_augmented=False)
 
-    print("🔍 Verifying splits...\n")
+    print("Verifying splits...\n")
     for split_name, (files, labels) in splits.items():
         missing = [f for f in files if not os.path.exists(f)]
         print(f"  {split_name}: {len(files)} files, {len(missing)} missing")
 
         if missing:
             for m in missing[:5]:
-                print(f"    ✗ {m}")
+                print(f"    MISSING: {m}")
             if len(missing) > 5:
                 print(f"    ... and {len(missing) - 5} more")
 
@@ -232,7 +232,7 @@ def verify_splits():
     assert train_set.isdisjoint(val_set), "Train/val overlap!"
     assert train_set.isdisjoint(test_set), "Train/test overlap!"
     assert val_set.isdisjoint(test_set), "Val/test overlap!"
-    print("\n✓ No overlap between splits.")
+    print("\nNo overlap between splits.")
 
 
 if __name__ == "__main__":

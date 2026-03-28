@@ -7,7 +7,7 @@ Supports:
 - Web Push via pywebpush (VAPID-authenticated)
 
 All credentials loaded from .env. If not configured, each service logs a clear
-WARNING — no silent failures.
+WARNING -- no silent failures.
 """
 
 import os
@@ -22,8 +22,9 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (explicit path for CWD-independence)
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(_env_path)
 
 # Textbee config
 TEXTBEE_API_KEY = os.getenv("TEXTBEE_API_KEY")
@@ -43,13 +44,13 @@ VAPID_MAILTO = os.getenv("VAPID_MAILTO", "mailto:admin@example.com")
 def _check_and_warn():
     """Log warnings for unconfigured notification services at startup."""
     if not TEXTBEE_API_KEY or not TEXTBEE_DEVICE_ID:
-        logger.warning("⚠ TEXTBEE_API_KEY or TEXTBEE_DEVICE_ID not set — SMS notifications disabled")
+        logger.warning("TEXTBEE_API_KEY or TEXTBEE_DEVICE_ID not set -- SMS notifications disabled")
 
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
-        logger.warning("⚠ TWILIO_ACCOUNT_SID/AUTH_TOKEN/PHONE_NUMBER not set — Voice call notifications disabled")
+        logger.warning("TWILIO_ACCOUNT_SID/AUTH_TOKEN/PHONE_NUMBER not set -- Voice call notifications disabled")
 
     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
-        logger.warning("⚠ VAPID_PRIVATE_KEY or VAPID_PUBLIC_KEY not set — Web Push notifications disabled")
+        logger.warning("VAPID_PRIVATE_KEY or VAPID_PUBLIC_KEY not set -- Web Push notifications disabled")
 
 
 # Run warnings on import
@@ -93,7 +94,7 @@ def store_push_subscription(subscription: dict):
         if existing.get("endpoint") == subscription.get("endpoint"):
             return
     push_subscriptions.append(subscription)
-    logger.info(f"✓ Push subscription stored (total: {len(push_subscriptions)})")
+    logger.info(f"Push subscription stored (total: {len(push_subscriptions)})")
 
 
 # --- SMS via Textbee ---
@@ -110,7 +111,7 @@ def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
         Dict with 'status' and 'detail' keys.
     """
     if not TEXTBEE_API_KEY or not TEXTBEE_DEVICE_ID:
-        logger.warning("⚠ SMS not sent — TEXTBEE credentials not configured")
+        logger.warning("SMS not sent -- TEXTBEE credentials not configured")
         return {"status": "disabled", "detail": "Textbee credentials not set"}
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -133,10 +134,10 @@ def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         response.raise_for_status()
-        logger.info(f"✓ SMS sent to {contact_number} via Textbee")
+        logger.info(f"SMS sent to {contact_number} via Textbee")
         return {"status": "sent", "detail": response.json()}
     except requests.RequestException as e:
-        logger.error(f"✗ SMS failed: {e}")
+        logger.error(f"SMS failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
 
@@ -156,7 +157,7 @@ def make_voice_call(contact_number: str, gesture: str, user_name: str) -> Dict:
         Dict with 'status' and 'detail' keys.
     """
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
-        logger.warning("⚠ Voice call not made — Twilio credentials not configured")
+        logger.warning("Voice call not made -- Twilio credentials not configured")
         return {"status": "disabled", "detail": "Twilio credentials not set"}
 
     # Rate limiting
@@ -180,10 +181,10 @@ def make_voice_call(contact_number: str, gesture: str, user_name: str) -> Dict:
             from_=TWILIO_PHONE_NUMBER
         )
 
-        logger.info(f"✓ Voice call initiated to {contact_number} (SID: {call.sid})")
+        logger.info(f"Voice call initiated to {contact_number} (SID: {call.sid})")
         return {"status": "initiated", "detail": {"sid": call.sid}}
     except Exception as e:
-        logger.error(f"✗ Voice call failed: {e}")
+        logger.error(f"Voice call failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
 
@@ -200,19 +201,19 @@ def send_push_notification(gesture: str, user_name: str) -> Dict:
         Dict with 'status' and 'detail' keys.
     """
     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
-        logger.warning("⚠ Push notification not sent — VAPID keys not configured")
+        logger.warning("Push notification not sent -- VAPID keys not configured")
         return {"status": "disabled", "detail": "VAPID keys not set"}
 
     if not push_subscriptions:
-        logger.warning("⚠ No push subscriptions registered")
+        logger.warning("No push subscriptions registered")
         return {"status": "no_subscriptions", "detail": "No browsers subscribed"}
 
     try:
         from pywebpush import webpush, WebPushException
 
         data = json.dumps({
-            "title": "🚨 DARURAT",
-            "body": f"{user_name} membutuhkan bantuan — isyarat {gesture} terdeteksi",
+            "title": "DARURAT",
+            "body": f"{user_name} membutuhkan bantuan -- isyarat {gesture} terdeteksi",
             "icon": "/icon.png"
         })
 
@@ -229,12 +230,12 @@ def send_push_notification(gesture: str, user_name: str) -> Dict:
                 )
                 sent_count += 1
             except WebPushException as e:
-                logger.error(f"✗ Push failed for one subscription: {e}")
+                logger.error(f"Push failed for one subscription: {e}")
 
-        logger.info(f"✓ Push notification sent to {sent_count}/{len(push_subscriptions)} subscribers")
+        logger.info(f"Push notification sent to {sent_count}/{len(push_subscriptions)} subscribers")
         return {"status": "sent", "detail": {"sent": sent_count, "total": len(push_subscriptions)}}
     except Exception as e:
-        logger.error(f"✗ Push notification failed: {e}")
+        logger.error(f"Push notification failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
 
@@ -258,5 +259,5 @@ def trigger_all_notifications(gesture: str, contact_number: str,
         "push_status": send_push_notification(gesture, user_name),
     }
 
-    logger.info(f"📢 All notifications triggered for gesture: {gesture}")
+    logger.info(f"All notifications triggered for gesture: {gesture}")
     return result

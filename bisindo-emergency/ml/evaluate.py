@@ -3,8 +3,8 @@ Evaluation script for BISINDO ST-GCN model.
 
 Generates:
 - Per-class precision, recall, F1-score (Table 1 for karya tulis)
-- Confusion matrix heatmap (Gambar 1) — PNG, 300dpi
-- Training curve plot (Gambar 3) — PNG, 300dpi
+- Confusion matrix heatmap (Gambar 1) -- PNG, 300dpi
+- Training curve plot (Gambar 3) -- PNG, 300dpi
 
 Usage:
     python -m ml.evaluate
@@ -49,7 +49,7 @@ def load_best_model(device):
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
 
-    print(f"✓ Loaded best model from epoch {checkpoint['epoch']} "
+    print(f"Loaded best model from epoch {checkpoint['epoch']} "
           f"(val_acc: {checkpoint['val_accuracy']:.2%})")
 
     return model
@@ -80,7 +80,7 @@ def get_predictions(model, dataloader, device):
 def generate_classification_report(y_true, y_pred):
     """Print and return classification metrics (Table 1)."""
     print("\n" + "=" * 60)
-    print("CLASSIFICATION REPORT (Table 1 — Karya Tulis)")
+    print("CLASSIFICATION REPORT (Table 1 -- Karya Tulis)")
     print("=" * 60)
 
     report = classification_report(y_true, y_pred, target_names=CLASSES, digits=4)
@@ -109,7 +109,7 @@ def generate_classification_report(y_true, y_pred):
                          f"{macro_f1:.4f}", int(support.sum())])
         writer.writerow(["Accuracy", f"{accuracy:.4f}", "", "", int(support.sum())])
 
-    print(f"  → Metrics saved to {csv_path}")
+    print(f"  Metrics saved to {csv_path}")
 
     return accuracy
 
@@ -127,7 +127,7 @@ def plot_confusion_matrix(y_true, y_pred):
     )
     ax.set_xlabel("Prediksi", fontsize=14)
     ax.set_ylabel("Label Sebenarnya", fontsize=14)
-    ax.set_title("Confusion Matrix — Kondisi Normal", fontsize=16, fontweight='bold')
+    ax.set_title("Confusion Matrix -- Kondisi Normal", fontsize=16, fontweight='bold')
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12, rotation=0)
 
@@ -135,13 +135,13 @@ def plot_confusion_matrix(y_true, y_pred):
     path = os.path.join(OUTPUT_DIR, "confusion_matrix.png")
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  → Confusion matrix saved to {path}")
+    print(f"  Confusion matrix saved to {path}")
 
 
 def plot_training_curve():
     """Generate training curve: train_loss vs val_loss (Gambar 3)."""
     if not os.path.exists(LOG_FILE):
-        print(f"  ⚠ Training log not found: {LOG_FILE}")
+        print(f"  Training log not found: {LOG_FILE}")
         return
 
     epochs, train_losses, val_losses, val_accs = [], [], [], []
@@ -178,7 +178,7 @@ def plot_training_curve():
     path = os.path.join(OUTPUT_DIR, "training_curve.png")
     plt.savefig(path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"  → Training curve saved to {path}")
+    print(f"  Training curve saved to {path}")
 
 
 def main():
@@ -187,7 +187,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else
                           "mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"🖥  Device: {device}")
+    print(f"Device: {device}")
 
     # Load model
     model = load_best_model(device)
@@ -195,7 +195,7 @@ def main():
     # Load test set (original only, no augmentation)
     loaders = create_dataloaders(include_augmented=False)
     test_loader = loaders['test']
-    print(f"📊 Test set: {len(test_loader.dataset)} samples")
+    print(f"Test set: {len(test_loader.dataset)} samples")
 
     # Get predictions
     y_pred, y_true, confidences = get_predictions(model, test_loader, device)
@@ -206,7 +206,7 @@ def main():
     plot_training_curve()
 
     print(f"\n{'='*60}")
-    print(f"✓ Evaluation complete!")
+    print(f"Evaluation complete!")
     print(f"  Test accuracy: {accuracy:.2%}")
     print(f"  Mean confidence: {confidences.mean():.4f}")
     print(f"  Results saved to: {OUTPUT_DIR}/")

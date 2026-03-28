@@ -30,26 +30,26 @@ def get_pose_edges() -> list:
         (11, 12),                            # Shoulders
         (11, 23), (12, 24), (23, 24),       # Shoulders to hips, hips
         # Right arm
-        (11, 13), (13, 15),                  # Right shoulder → elbow → wrist
-        (15, 17), (15, 19), (15, 21),       # Right wrist → fingers
+        (11, 13), (13, 15),                  # Right shoulder -> elbow -> wrist
+        (15, 17), (15, 19), (15, 21),       # Right wrist -> fingers
         (17, 19),
         # Left arm
-        (12, 14), (14, 16),                  # Left shoulder → elbow → wrist
-        (16, 18), (16, 20), (16, 22),       # Left wrist → fingers
+        (12, 14), (14, 16),                  # Left shoulder -> elbow -> wrist
+        (16, 18), (16, 20), (16, 22),       # Left wrist -> fingers
         (18, 20),
         # Right leg
-        (23, 25), (25, 27),                  # Right hip → knee → ankle
-        (27, 29), (27, 31), (29, 31),       # Right ankle → foot
+        (23, 25), (25, 27),                  # Right hip -> knee -> ankle
+        (27, 29), (27, 31), (29, 31),       # Right ankle -> foot
         # Left leg
-        (24, 26), (26, 28),                  # Left hip → knee → ankle
-        (28, 30), (28, 32), (30, 32),       # Left ankle → foot
+        (24, 26), (26, 28),                  # Left hip -> knee -> ankle
+        (28, 30), (28, 32), (30, 32),       # Left ankle -> foot
     ]
 
 
 def get_hand_edges(offset: int = 0) -> list:
     """MediaPipe Hand connections (21 nodes per hand).
 
-    Wrist → each finger base, then finger base → tip sequentially.
+    Wrist -> each finger base, then finger base -> tip sequentially.
 
     Args:
         offset: Index offset (33 for left hand, 54 for right hand).
@@ -78,8 +78,8 @@ def get_cross_body_edges() -> list:
     the pose skeleton and hand detail graphs.
     """
     return [
-        (15, 33),   # Pose left wrist → Left hand wrist
-        (16, 54),   # Pose right wrist → Right hand wrist
+        (15, 33),   # Pose left wrist -> Left hand wrist
+        (16, 54),   # Pose right wrist -> Right hand wrist
     ]
 
 

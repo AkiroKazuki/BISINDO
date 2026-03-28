@@ -1,5 +1,5 @@
 /**
- * CameraView — webcam video with skeleton overlay.
+ * CameraView -- webcam video with skeleton overlay.
  * 
  * Uses useMediaPipe to extract keypoints and useWebSocket to stream to backend.
  * Triggers Web Speech API TTS when gesture is confirmed.
@@ -61,13 +61,13 @@ export default function CameraView({ sendFrame, prediction }) {
       
       {!isReady && !error && (
         <div className="camera-placeholder">
-          <span>⏳ Memuat kamera dan MediaPipe...</span>
+          <span>Memuat kamera dan MediaPipe...</span>
         </div>
       )}
       
       {error && (
         <div className="camera-placeholder" style={{ color: 'var(--accent-red)' }}>
-          <span>❌ {error}</span>
+          <span>{error}</span>
         </div>
       )}
     </div>

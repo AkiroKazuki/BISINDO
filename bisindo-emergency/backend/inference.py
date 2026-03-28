@@ -152,14 +152,14 @@ class InferencePipeline:
         Returns:
             (class_name, confidence) tuple.
         """
-        # Stack buffer → (60, 75, 3)
+        # Stack buffer -> (60, 75, 3)
         window = self.buffer.get_window()
         sequence = np.stack(window, axis=0).astype(np.float32)
 
-        # Transpose → (3, 60, 75)
+        # Transpose -> (3, 60, 75)
         sequence = np.transpose(sequence, (2, 0, 1))
 
-        # Unsqueeze → (1, 3, 60, 75)
+        # Unsqueeze -> (1, 3, 60, 75)
         tensor = torch.from_numpy(sequence).unsqueeze(0).to(self.device)
 
         # Forward pass

@@ -2,7 +2,7 @@
 Data augmentation for BISINDO keypoint sequences.
 
 Augmentations are applied to numpy arrays (NOT video) and only to the train split.
-Each original sample generates 4 augmented copies → 5x total data.
+Each original sample generates 4 augmented copies -> 5x total data.
 
 Usage:
     python -m ml.augment
@@ -151,7 +151,7 @@ def augment_train_split(split_file: str = "split_indices.json"):
     """
     # Load split indices
     if not os.path.exists(split_file):
-        print(f"✗ Split file not found: {split_file}")
+        print(f"Split file not found: {split_file}")
         print("  Run `python -m ml.dataset` first to generate splits.")
         sys.exit(1)
 
@@ -160,15 +160,15 @@ def augment_train_split(split_file: str = "split_indices.json"):
 
     train_files = splits.get("train_files", [])
     if not train_files:
-        print("✗ No train files found in split indices.")
+        print("No train files found in split indices.")
         sys.exit(1)
 
-    print(f"🔄 Augmenting {len(train_files)} train samples (4 augmentations each)...")
+    print(f"Augmenting {len(train_files)} train samples (4 augmentations each)...")
 
     total_created = 0
     for filepath in tqdm(train_files, desc="Augmenting"):
         if not os.path.exists(filepath):
-            print(f"  ⚠ File not found: {filepath}")
+            print(f"  WARNING: File not found: {filepath}")
             continue
 
         sequence = np.load(filepath)
@@ -181,7 +181,7 @@ def augment_train_split(split_file: str = "split_indices.json"):
             np.save(aug_path, aug_seq)
             total_created += 1
 
-    print(f"\n✓ Created {total_created} augmented files.")
+    print(f"\nCreated {total_created} augmented files.")
     print(f"  Total dataset size: {len(train_files)} original + {total_created} augmented "
           f"= {len(train_files) + total_created} train samples")
 

@@ -16,6 +16,8 @@ env/
 .DS_Store
 
 # Data files (too large for git)
+dataset/raw/
+dataset/processed/
 data/raw/
 data/processed/
 data/splits/
@@ -26,9 +28,12 @@ checkpoints/
 *.pth
 *.onnx
 
-# Logs
+# Logs and training artifacts
 logs/
 *.log
+training_log.csv
+split_indices.json
+
 
 # Jupyter
 .ipynb_checkpoints/
