@@ -33,17 +33,27 @@ export default function App() {
             const permission = await Notification.requestPermission()
             if (permission === 'granted') {
               try {
-                // Subscribe to push (using VAPID public key from server would go here)
-                // For now, we just register the service worker
-                const subscription = await registration.pushManager.getSubscription()
-                if (subscription) {
-                  // Send subscription to backend
-                  await fetch('http://localhost:8000/subscribe-push', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(subscription.toJSON()),
-                  })
+                // Fetch the VAPID public key from the backend
+                const vapidResponse = await fetch('http://localhost:8000/vapid-public-key')
+                const { publicKey } = await vapidResponse.json()
+
+                if (!publicKey) {
+                  console.warn('VAPID public key not configured on server')
+                  return
                 }
+
+                // Subscribe to push notifications with the VAPID key
+                const subscription = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: publicKey,
+                })
+
+                // Send subscription to backend
+                await fetch('http://localhost:8000/subscribe-push', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(subscription.toJSON()),
+                })
               } catch (e) {
                 console.warn('Push subscription failed:', e)
               }

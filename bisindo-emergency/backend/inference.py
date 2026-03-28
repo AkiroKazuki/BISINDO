@@ -71,7 +71,7 @@ class InferencePipeline:
     def _load_model(self, checkpoint_path: str):
         """Load ST-GCN model from checkpoint."""
         if not os.path.exists(checkpoint_path):
-            logger.warning(f"⚠ Model checkpoint not found: {checkpoint_path}")
+            logger.warning(f"Model checkpoint not found: {checkpoint_path}")
             logger.warning("  Inference will return dummy results until model is trained.")
             return
 
@@ -85,10 +85,10 @@ class InferencePipeline:
             self.model.eval()
             self.model_loaded = True
 
-            logger.info(f"✓ Model loaded from {checkpoint_path} "
+            logger.info(f"Model loaded from {checkpoint_path} "
                         f"(val_acc: {checkpoint.get('val_accuracy', 'N/A')})")
         except Exception as e:
-            logger.error(f"✗ Failed to load model: {e}")
+            logger.error(f"Failed to load model: {e}")
             self.model_loaded = False
 
     def process_frame(self, keypoints: np.ndarray) -> dict:
@@ -141,7 +141,7 @@ class InferencePipeline:
 
         if is_confirmed:
             result['class'] = confirmed_class
-            logger.info(f"🚨 CONFIRMED: {confirmed_class} (confidence: {confidence:.2%})")
+            logger.info(f"CONFIRMED: {confirmed_class} (confidence: {confidence:.2%})")
 
         return result
 

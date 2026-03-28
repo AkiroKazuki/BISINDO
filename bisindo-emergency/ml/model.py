@@ -1,8 +1,8 @@
 """
 ST-GCN (Spatial-Temporal Graph Convolutional Network) for BISINDO gesture recognition.
 
-Architecture: 10 ST-GCN blocks with channel config [3→64, 64³, 64→128, 128⁴, 128→256, 256²]
-followed by Global Average Pooling → Dropout → Linear(256, 3).
+Architecture: 10 ST-GCN blocks with channel config [3->64, 64^3, 64->128, 128^4, 128->256, 256^2]
+followed by Global Average Pooling -> Dropout -> Linear(256, 3).
 
 Output is raw logits (no softmax). Use softmax only during inference for confidence scores.
 """
@@ -17,26 +17,28 @@ class SpatialGraphConv(nn.Module):
 
     Performs graph convolution: H_out = A_hat @ H_in @ W
     Efficiently implemented using Conv2d with kernel_size=1 as the weight matrix.
+
+    A_hat is received via forward() from the parent STGCN module, which registers
+    it as a buffer. This ensures correct save/load behaviour with torch.save.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, A_hat: torch.Tensor):
+    def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
-        self.A_hat = A_hat  # (V, V) — will be registered as buffer by parent
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, A_hat: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: (batch, C_in, T, V)
+            A_hat: (V, V) normalized adjacency matrix
 
         Returns:
             (batch, C_out, T, V)
         """
         # Graph convolution: multiply feature with adjacency matrix
         # x shape: (B, C, T, V), A_hat shape: (V, V)
-        # We want to do: for each timestep, H_out = A_hat @ H_in
         # Equivalent to: einsum('vw, bctw -> bctv', A_hat, x)
-        x = torch.einsum('vw,bctw->bctv', self.A_hat, x)
+        x = torch.einsum('vw,bctw->bctv', A_hat, x)
 
         # Apply learnable weight via 1x1 conv
         x = self.conv(x)
@@ -47,7 +49,7 @@ class SpatialGraphConv(nn.Module):
 class TemporalConv(nn.Module):
     """Temporal convolution layer.
 
-    Conv2d with kernel (9, 1) — 9 on temporal axis, 1 on node axis.
+    Conv2d with kernel (9, 1) -- 9 on temporal axis, 1 on node axis.
     Padding (4, 0) preserves temporal length.
     """
 
@@ -66,7 +68,7 @@ class TemporalConv(nn.Module):
             x: (batch, C, T, V)
 
         Returns:
-            (batch, C, T, V) — temporal length unchanged
+            (batch, C, T, V) -- temporal length unchanged
         """
         return self.bn(self.conv(x))
 
@@ -74,14 +76,17 @@ class TemporalConv(nn.Module):
 class STGCNBlock(nn.Module):
     """Single ST-GCN block.
 
-    Flow: SpatialGraphConv → BN → ReLU → TemporalConv → BN → Residual → ReLU
+    Flow: SpatialGraphConv -> BN -> ReLU -> TemporalConv -> BN -> Residual -> ReLU
+
+    A_hat is passed through forward() rather than stored, so that only the
+    top-level STGCN module owns the buffer.
     """
 
-    def __init__(self, in_channels: int, out_channels: int, A_hat: torch.Tensor):
+    def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
 
-        # Spatial graph convolution
-        self.spatial_conv = SpatialGraphConv(in_channels, out_channels, A_hat)
+        # Spatial graph convolution (A_hat passed via forward)
+        self.spatial_conv = SpatialGraphConv(in_channels, out_channels)
         self.bn_spatial = nn.BatchNorm2d(out_channels)
 
         # Temporal convolution
@@ -96,10 +101,11 @@ class STGCNBlock(nn.Module):
         else:
             self.residual = nn.Identity()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, A_hat: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: (batch, C_in, T, V)
+            A_hat: (V, V) normalized adjacency matrix
 
         Returns:
             (batch, C_out, T, V)
@@ -107,10 +113,10 @@ class STGCNBlock(nn.Module):
         # Save for residual
         res = self.residual(x)
 
-        # Spatial → BN → ReLU
-        x = F.relu(self.bn_spatial(self.spatial_conv(x)))
+        # Spatial -> BN -> ReLU
+        x = F.relu(self.bn_spatial(self.spatial_conv(x, A_hat)))
 
-        # Temporal → BN
+        # Temporal -> BN
         x = self.temporal_conv(x)
 
         # Add residual + ReLU
@@ -123,9 +129,12 @@ class STGCN(nn.Module):
     """ST-GCN model for BISINDO emergency gesture classification.
 
     10 ST-GCN blocks with channel progression:
-    3→64, 64→64, 64→64, 64→128, 128→128, 128→128, 128→128, 128→256, 256→256, 256→256
+    3->64, 64->64, 64->64, 64->128, 128->128, 128->128, 128->128, 128->256, 256->256, 256->256
 
-    Output: Global Average Pooling → Dropout(0.5) → Linear(256, num_classes) → logits
+    Output: Global Average Pooling -> Dropout(0.5) -> Linear(256, num_classes) -> logits
+
+    A_hat is registered as a buffer here and passed to each block via forward().
+    This is the single source of truth for the adjacency matrix.
     """
 
     # Channel configuration for each of the 10 blocks
@@ -150,13 +159,13 @@ class STGCN(nn.Module):
         """
         super().__init__()
 
-        # Register adjacency matrix as buffer (not optimized)
+        # Register adjacency matrix as buffer (saved with model, not optimized)
         self.register_buffer('A_hat', A)
 
-        # Build ST-GCN blocks
+        # Build ST-GCN blocks (A_hat is NOT passed to __init__ anymore)
         self.blocks = nn.ModuleList()
         for in_ch, out_ch in self.BLOCK_CONFIGS:
-            self.blocks.append(STGCNBlock(in_ch, out_ch, self.A_hat))
+            self.blocks.append(STGCNBlock(in_ch, out_ch))
 
         # Output layers
         self.dropout = nn.Dropout(p=0.5)
@@ -165,17 +174,17 @@ class STGCN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            x: (batch, 3, 60, 75) — (batch, channels, time, vertices)
+            x: (batch, 3, 60, 75) -- (batch, channels, time, vertices)
 
         Returns:
-            (batch, num_classes) — raw logits (no softmax)
+            (batch, num_classes) -- raw logits (no softmax)
         """
-        # Pass through ST-GCN blocks
+        # Pass through ST-GCN blocks, providing A_hat from our buffer
         for block in self.blocks:
-            x = block(x)
+            x = block(x, self.A_hat)
 
         # Global Average Pooling over temporal and node dimensions
-        # x shape: (batch, 256, T, V) → (batch, 256)
+        # x shape: (batch, 256, T, V) -> (batch, 256)
         x = x.mean(dim=-1).mean(dim=-1)
 
         # Dropout + classification
@@ -201,4 +210,9 @@ if __name__ == "__main__":
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
     assert output.shape == (2, 3), f"Expected (2, 3), got {output.shape}"
-    print("\n✓ Model shape test passed!")
+    print("\nModel shape test passed!")
+
+    # Verify A_hat is in state_dict (buffer test)
+    state = model.state_dict()
+    assert 'A_hat' in state, "A_hat should be in state_dict as a registered buffer"
+    print("Buffer registration test passed!")

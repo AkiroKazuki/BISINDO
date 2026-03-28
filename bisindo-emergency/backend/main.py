@@ -2,10 +2,11 @@
 FastAPI backend for BISINDO Emergency Detection System.
 
 Endpoints:
-  WebSocket /ws          — Real-time keypoint streaming + inference
-  POST     /notify       — Trigger notification pipeline
-  POST     /subscribe-push — Store Web Push subscription
-  GET      /health       — Health check
+  WebSocket /ws              — Real-time keypoint streaming + inference
+  POST     /notify           — Trigger notification pipeline
+  POST     /subscribe-push   — Store Web Push subscription
+  GET      /health           — Health check
+  GET      /vapid-public-key — Return VAPID public key for push subscription
 
 Usage:
     cd bisindo-emergency
@@ -18,9 +19,15 @@ import json
 import logging
 
 import numpy as np
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY', '')
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -157,6 +164,15 @@ async def subscribe_push(subscription: PushSubscription):
     """
     store_push_subscription(subscription.model_dump())
     return {"status": "subscribed"}
+
+
+@app.get("/vapid-public-key")
+async def vapid_public_key():
+    """Return the VAPID public key for push notification subscription."""
+    if not VAPID_PUBLIC_KEY:
+        logger.warning("VAPID_PUBLIC_KEY is not configured in .env")
+        return {"publicKey": "", "error": "VAPID key not configured"}
+    return {"publicKey": VAPID_PUBLIC_KEY}
 
 
 if __name__ == "__main__":
