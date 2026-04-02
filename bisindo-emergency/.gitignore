@@ -24,6 +24,8 @@ dataset/processed/
 
 # Model checkpoints (large files)
 ml/checkpoints/
+ml/results/
+holistic_landmarker.task
 *.pt
 *.pth
 *.onnx

@@ -1,7 +1,7 @@
 # Core ML
 torch>=2.0.0
 torchvision
-mediapipe>=0.10.0
+mediapipe>=0.10.30
 numpy
 scikit-learn
 scipy
