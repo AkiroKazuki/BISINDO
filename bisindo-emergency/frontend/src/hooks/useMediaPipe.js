@@ -1,54 +1,57 @@
-/**
- * useMediaPipe — hook for MediaPipe Holistic keypoint extraction.
- * 
- * Loads MediaPipe Holistic on mount, sets up camera loop,
- * and extracts 75 keypoints (33 pose + 21 left hand + 21 right hand) per frame.
- */
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { Holistic } from '@mediapipe/holistic'
-import { Camera } from '@mediapipe/camera_utils'
+import { FilesetResolver, HolisticLandmarker } from '@mediapipe/tasks-vision'
 
 const NUM_POSE = 33
 const NUM_HAND = 21
 const TOTAL = NUM_POSE + NUM_HAND * 2 // 75
 
+// To prevent hands "teleporting" to the chest if MediaPipe loses them due to motion blur,
+// we cache the last known positions.
+let cachedLeftHand = new Array(NUM_HAND).fill([0, 0, 0])
+let cachedRightHand = new Array(NUM_HAND).fill([0, 0, 0])
+
 export default function useMediaPipe(videoRef, onResults) {
-  const cameraRef = useRef(null)
-  const holisticRef = useRef(null)
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState(null)
+  const landmarkerRef = useRef(null)
+  const animationRef = useRef(null)
+  const lastVideoTimeRef = useRef(-1)
 
-  const extractKeypoints = useCallback((results) => {
+  const extractKeypoints = useCallback((result) => {
     const keypoints = new Array(TOTAL)
 
     // Pose landmarks (0-32)
+    const pose = result.poseLandmarks?.[0]
     for (let i = 0; i < NUM_POSE; i++) {
-      if (results.poseLandmarks && results.poseLandmarks[i]) {
-        const lm = results.poseLandmarks[i]
-        keypoints[i] = [lm.x, lm.y, lm.z]
+      if (pose && pose[i]) {
+        keypoints[i] = [pose[i].x, pose[i].y, pose[i].z]
       } else {
         keypoints[i] = [0, 0, 0]
       }
     }
 
     // Left hand landmarks (33-53)
-    for (let i = 0; i < NUM_HAND; i++) {
-      if (results.leftHandLandmarks && results.leftHandLandmarks[i]) {
-        const lm = results.leftHandLandmarks[i]
-        keypoints[NUM_POSE + i] = [lm.x, lm.y, lm.z]
-      } else {
-        keypoints[NUM_POSE + i] = [0, 0, 0]
+    const leftHand = result.leftHandLandmarks?.[0]
+    if (leftHand && leftHand.length > 0) {
+      for (let i = 0; i < NUM_HAND; i++) {
+        const p = leftHand[i]
+        cachedLeftHand[i] = [p.x, p.y, p.z]
       }
+    }
+    for (let i = 0; i < NUM_HAND; i++) {
+      keypoints[NUM_POSE + i] = cachedLeftHand[i]
     }
 
     // Right hand landmarks (54-74)
-    for (let i = 0; i < NUM_HAND; i++) {
-      if (results.rightHandLandmarks && results.rightHandLandmarks[i]) {
-        const lm = results.rightHandLandmarks[i]
-        keypoints[NUM_POSE + NUM_HAND + i] = [lm.x, lm.y, lm.z]
-      } else {
-        keypoints[NUM_POSE + NUM_HAND + i] = [0, 0, 0]
+    const rightHand = result.rightHandLandmarks?.[0]
+    if (rightHand && rightHand.length > 0) {
+      for (let i = 0; i < NUM_HAND; i++) {
+        const p = rightHand[i]
+        cachedRightHand[i] = [p.x, p.y, p.z]
       }
+    }
+    for (let i = 0; i < NUM_HAND; i++) {
+      keypoints[NUM_POSE + NUM_HAND + i] = cachedRightHand[i]
     }
 
     return keypoints
@@ -57,58 +60,112 @@ export default function useMediaPipe(videoRef, onResults) {
   useEffect(() => {
     if (!videoRef.current) return
 
-    // Initialize MediaPipe Holistic
-    const holistic = new Holistic({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`
-      }
-    })
+    let isRunning = true
 
-    holistic.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    })
+    const initMediaPipe = async () => {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+        )
+        
+        const landmarker = await HolisticLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "/holistic_landmarker.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minHandLandmarksConfidence: 0.1, // lowered to detect blurry fast movements
+          minTrackingConfidence: 0.5,
+          outputFaceBlendshapes: false,
+          outputSegmentationMasks: false,
+        })
 
-    holistic.onResults((results) => {
-      const keypoints = extractKeypoints(results)
-      if (onResults) {
-        onResults(keypoints, results)
-      }
-    })
-
-    holisticRef.current = holistic
-
-    // Start camera
-    const camera = new Camera(videoRef.current, {
-      onFrame: async () => {
-        if (holisticRef.current && videoRef.current) {
-          await holisticRef.current.send({ image: videoRef.current })
+        if (!isRunning) {
+          landmarker.close()
+          return
         }
-      },
-      width: 1280,
-      height: 720,
-    })
 
-    camera.start()
-      .then(() => {
-        setIsReady(true)
-        setError(null)
-      })
-      .catch((err) => {
-        console.error('Camera error:', err)
-        setError('Failed to access camera. Please allow camera permissions.')
-      })
+        landmarkerRef.current = landmarker
 
-    cameraRef.current = camera
+        // Start WebCam with 3:4 aspect ratio to match training data (720x960)
+        // This prevents the X/Y normalization from being stretched.
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 480, height: 640, facingMode: "user" } 
+        })
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          
+          videoRef.current.onloadeddata = () => {
+            setIsReady(true)
+            
+            // Log first detection to verify hand landmarks are detected
+            let hasLoggedOnce = false
+            
+            const renderLoop = () => {
+              if (!isRunning) return
+              
+              const video = videoRef.current
+              if (video && video.readyState >= 2 && landmarkerRef.current) {
+                const startTimeMs = performance.now()
+                // Prevent duplicate processing of the same frame
+                if (video.currentTime !== lastVideoTimeRef.current) {
+                  const result = landmarkerRef.current.detectForVideo(video, startTimeMs)
+                  
+                  if (result) {
+                    // Debug: log first result with hand landmarks
+                    if (!hasLoggedOnce) {
+                      const hasLeft = result.leftHandLandmarks && result.leftHandLandmarks.length > 0
+                      const hasRight = result.rightHandLandmarks && result.rightHandLandmarks.length > 0
+                      console.log('[MediaPipe] First detection:', {
+                        pose: result.poseLandmarks?.length || 0,
+                        leftHand: hasLeft ? result.leftHandLandmarks[0]?.length : 0,
+                        rightHand: hasRight ? result.rightHandLandmarks[0]?.length : 0,
+                      })
+                      if (hasLeft || hasRight) {
+                        hasLoggedOnce = true
+                      }
+                    }
+                    
+                    const keypoints = extractKeypoints(result)
+                    if (onResults) {
+                      // Pass raw results for skeleton overlay drawing
+                      onResults(keypoints, {
+                        poseLandmarks: result.poseLandmarks?.[0] || [],
+                        leftHandLandmarks: result.leftHandLandmarks?.[0] || [],
+                        rightHandLandmarks: result.rightHandLandmarks?.[0] || []
+                      })
+                    }
+                  }
+                  lastVideoTimeRef.current = video.currentTime
+                }
+              }
+              animationRef.current = requestAnimationFrame(renderLoop)
+            }
+            
+            renderLoop()
+          }
+        }
+      } catch (err) {
+        console.error('MediaPipe Init Error:', err)
+        setError('Gagal memuat AI atau kamera. Pastikan izin kamera aktif.')
+      }
+    }
+
+    initMediaPipe()
 
     return () => {
-      if (cameraRef.current) {
-        cameraRef.current.stop()
+      isRunning = false
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
       }
-      if (holisticRef.current) {
-        holisticRef.current.close()
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop())
+      }
+      if (landmarkerRef.current) {
+        landmarkerRef.current.close()
       }
     }
   }, [videoRef, onResults, extractKeypoints])

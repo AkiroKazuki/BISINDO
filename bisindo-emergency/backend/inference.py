@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ml.graph import build_adjacency_matrix
 from ml.model import STGCN
 from utils.normalize import normalize_shoulder_center
-from backend.buffer import SlidingWindowBuffer, ConfirmationTracker
+from backend.buffer import SlidingWindowBuffer, ConfirmationTracker, MotionDetector
 
 
 logger = logging.getLogger(__name__)
@@ -59,8 +59,9 @@ class InferencePipeline:
         self.model_loaded = False
         self._load_model(checkpoint_path)
 
-        # Buffer and confirmation
+        # Buffer, motion detection, and confirmation
         self.buffer = SlidingWindowBuffer(window_size=60, stride=15)
+        self.motion_detector = MotionDetector(motion_threshold=0.15)
         self.confirmation = ConfirmationTracker(
             buffer_size=5,
             min_agreement=4,
@@ -127,6 +128,14 @@ class InferencePipeline:
             result['class'] = 'NO_MODEL'
             return result
 
+        # Check for sufficient hand/arm movement before inference
+        window = self.buffer.get_window()
+        if not self.motion_detector.has_sufficient_motion(window):
+            # User is idle — do NOT force a class prediction
+            result['class'] = None
+            result['confidence'] = 0.0
+            return result
+
         # Run inference
         class_name, confidence = self._infer()
 
@@ -155,6 +164,9 @@ class InferencePipeline:
         # Stack buffer -> (60, 75, 3)
         window = self.buffer.get_window()
         sequence = np.stack(window, axis=0).astype(np.float32)
+
+        # [DIAGNOSTIC] DUMP THE SEQUENCE
+        np.save("live_buffer_dump.npy", sequence)
 
         # Transpose -> (3, 60, 75)
         sequence = np.transpose(sequence, (2, 0, 1))

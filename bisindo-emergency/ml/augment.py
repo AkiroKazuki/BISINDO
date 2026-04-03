@@ -40,12 +40,12 @@ def gaussian_noise(sequence: np.ndarray, std: float = 0.01) -> np.ndarray:
     return sequence + noise
 
 
-def time_warp(sequence: np.ndarray, factor_range: tuple = (0.8, 1.2)) -> np.ndarray:
+def time_warp(sequence: np.ndarray, factor_range: tuple = (0.5, 2.0)) -> np.ndarray:
     """Warp temporal axis to simulate speed variation.
 
     Args:
         sequence: Array of shape (60, 75, 3).
-        factor_range: Min and max warp factor.
+        factor_range: Min and max warp factor. 0.5 = 2x as fast, 2.0 = half as fast.
 
     Returns:
         Augmented array of shape (60, 75, 3).
@@ -86,35 +86,31 @@ def time_warp(sequence: np.ndarray, factor_range: tuple = (0.8, 1.2)) -> np.ndar
     return result.astype(np.float32)
 
 
-def spatial_scale(sequence: np.ndarray, scale_range: tuple = (0.9, 1.1)) -> np.ndarray:
-    """Scale all coordinates uniformly to simulate distance variation.
-
-    The SAME scale factor is applied to all frames in the sequence.
-
-    Args:
-        sequence: Array of shape (60, 75, 3).
-        scale_range: Min and max scale factor.
-
-    Returns:
-        Augmented array of same shape.
+def spatial_scale(sequence: np.ndarray, scale_range: tuple = (0.5, 1.8)) -> np.ndarray:
+    """Scale all coordinates uniformly.
+    
+    Since data is already shoulder-normalized, this simulates people with 
+    proportionally very long arms (scale > 1) or very short arms (scale < 1).
     """
     factor = np.random.uniform(*scale_range)
     return (sequence * factor).astype(np.float32)
 
 
-def temporal_jitter(sequence: np.ndarray, std: float = 0.005) -> np.ndarray:
-    """Add temporally consistent jitter to simulate natural hand tremor.
+def spatial_shift(sequence: np.ndarray, shift_range: float = 0.3) -> np.ndarray:
+    """Shift X and Y coordinates slightly to simulate off-center framing
+    or slouching posture."""
+    shift_x = np.random.uniform(-shift_range, shift_range)
+    shift_y = np.random.uniform(-shift_range, shift_range)
+    
+    aug = sequence.copy()
+    # Apply shift to X and Y only
+    aug[:, :, 0] += shift_x
+    aug[:, :, 1] += shift_y
+    return aug.astype(np.float32)
 
-    Generates noise at start and end of sequence, linearly interpolates
-    between them for smooth, consistent noise.
 
-    Args:
-        sequence: Array of shape (60, 75, 3).
-        std: Standard deviation for start/end noise.
-
-    Returns:
-        Augmented array of same shape.
-    """
+def temporal_jitter(sequence: np.ndarray, std: float = 0.015) -> np.ndarray:
+    """Add temporally consistent jitter to simulate natural hand tremor."""
     T = sequence.shape[0]
     shape = (NUM_LANDMARKS, 3)
 
@@ -130,16 +126,18 @@ def temporal_jitter(sequence: np.ndarray, std: float = 0.005) -> np.ndarray:
 
 
 def augment_sample(sequence: np.ndarray) -> list:
-    """Generate 4 augmented versions of a single sample.
-
-    Returns:
-        List of 4 augmented arrays, each (60, 75, 3).
-    """
+    """Generate 10 augmented versions of a single sample to force generalization."""
     return [
-        gaussian_noise(sequence),
-        time_warp(sequence),
-        spatial_scale(sequence),
-        temporal_jitter(sequence),
+        gaussian_noise(sequence, std=0.01),
+        gaussian_noise(sequence, std=0.03),
+        time_warp(sequence, factor_range=(0.5, 0.8)),  # Very fast
+        time_warp(sequence, factor_range=(1.2, 2.0)),  # Very slow
+        spatial_scale(sequence, scale_range=(0.5, 0.8)), # Short arms (kids)
+        spatial_scale(sequence, scale_range=(1.2, 1.8)), # Long arms (tall adults)
+        spatial_shift(sequence, shift_range=0.2),
+        spatial_shift(sequence, shift_range=0.4),
+        temporal_jitter(sequence, std=0.01),
+        temporal_jitter(sequence, std=0.03),
     ]
 
 

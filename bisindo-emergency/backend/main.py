@@ -123,6 +123,18 @@ async def websocket_endpoint(ws: WebSocket):
                 })
                 continue
 
+            # [DIAGNOSTIC] Log hand keypoint detection (once per connection)
+            if not hasattr(websocket_endpoint, '_diag_logged'):
+                hand_kps = keypoints[33:75]  # left + right hand
+                nonzero_hands = int((np.abs(hand_kps).sum(axis=1) > 0.001).sum())
+                logger.info(f"[DIAGNOSTIC] Hand keypoints detected: {nonzero_hands}/42"
+                            f" (pose: 33/33, total non-zero: "
+                            f"{int((np.abs(keypoints).sum(axis=1) > 0.001).sum())}/75)")
+                if nonzero_hands == 0:
+                    logger.warning("[DIAGNOSTIC] NO HAND LANDMARKS DETECTED! "
+                                   "The model needs hand data to distinguish gestures.")
+                websocket_endpoint._diag_logged = True
+
             # Process through inference pipeline
             result = pipeline.process_frame(keypoints)
 

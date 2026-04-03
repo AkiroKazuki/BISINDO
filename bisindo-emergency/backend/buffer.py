@@ -132,3 +132,58 @@ class ConfirmationTracker:
         """Reset all state."""
         self.predictions.clear()
         self.last_confirmed_time = 0.0
+
+
+class MotionDetector:
+    """Detects whether there is sufficient hand/arm movement to warrant inference.
+
+    Compares keypoint displacement across frames in the sliding window.
+    If the cumulative motion of hand landmarks is below a threshold,
+    the user is considered idle and inference is skipped.
+
+    This prevents false positives when the model (which has no 'idle' class)
+    is forced to classify a stationary pose as one of the 3 gesture classes.
+    """
+
+    # Hand keypoint indices: left hand (33-53) + right hand (54-74)
+    HAND_START = 33
+    HAND_END = 75
+
+    def __init__(self, motion_threshold: float = 0.15):
+        """
+        Args:
+            motion_threshold: Minimum cumulative hand displacement (in normalized
+                coordinates) across the window to consider "active". A typical
+                sign language gesture produces 0.3-2.0 of cumulative motion.
+                Idle sitting produces < 0.05.
+        """
+        self.motion_threshold = motion_threshold
+
+    def has_sufficient_motion(self, window: list) -> bool:
+        """Check if the sliding window contains enough hand movement.
+
+        Args:
+            window: List of normalized keypoint arrays, each (75, 3).
+
+        Returns:
+            True if enough motion is detected, False if idle.
+        """
+        if len(window) < 2:
+            return False
+
+        import numpy as np
+
+        total_displacement = 0.0
+        for i in range(1, len(window)):
+            prev_hands = window[i - 1][self.HAND_START:self.HAND_END, :2]  # x,y only
+            curr_hands = window[i][self.HAND_START:self.HAND_END, :2]
+
+            # Only count non-zero landmarks (hands that are actually detected)
+            mask = (np.abs(prev_hands).sum(axis=1) > 0.01) & \
+                   (np.abs(curr_hands).sum(axis=1) > 0.01)
+
+            if mask.sum() > 0:
+                displacement = np.linalg.norm(curr_hands[mask] - prev_hands[mask], axis=1)
+                total_displacement += displacement.mean()
+
+        return total_displacement > self.motion_threshold

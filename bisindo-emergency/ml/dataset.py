@@ -118,7 +118,7 @@ def generate_splits():
     train_aug_labels = []
     for filepath, label in zip(train_files, train_labels):
         base, ext = os.path.splitext(filepath)
-        for i in range(1, 5):  # _aug1, _aug2, _aug3, _aug4
+        for i in range(1, 11):  # _aug1 to _aug10
             aug_path = f"{base}_aug{i}{ext}"
             if os.path.exists(aug_path):
                 train_aug_files.append(aug_path)
