@@ -141,6 +141,7 @@ def train():
 
     # Training state
     best_val_accuracy = 0.0
+    best_val_loss = float('inf')
     patience_counter = 0
 
     print(f"\nStarting training (max {CONFIG['max_epochs']} epochs)...\n")
@@ -174,8 +175,10 @@ def train():
               f"time: {elapsed:.1f}s")
 
         # Checkpoint best model
-        if val_accuracy > best_val_accuracy:
+        # We save if accuracy improves OR if accuracy is stable at 100% but the loss decreases
+        if val_accuracy > best_val_accuracy or (val_accuracy == best_val_accuracy and val_loss < best_val_loss):
             best_val_accuracy = val_accuracy
+            best_val_loss = val_loss
             patience_counter = 0
             torch.save({
                 'epoch': epoch,
@@ -184,7 +187,7 @@ def train():
                 'val_accuracy': val_accuracy,
                 'val_loss': val_loss,
             }, checkpoint_path)
-            print(f"  [BEST] New best model saved (val_acc: {val_accuracy:.2%})")
+            print(f"  [BEST] New best model saved (val_acc: {val_accuracy:.2%}, val_loss: {val_loss:.4f})")
         else:
             patience_counter += 1
 

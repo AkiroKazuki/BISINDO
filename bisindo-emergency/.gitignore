@@ -51,4 +51,6 @@ htmlcov/
 *.tmp
 *.temp
 
+#google colab
+colab_ml_only.zip
 colab_training.zip
