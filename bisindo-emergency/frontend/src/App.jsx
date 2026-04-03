@@ -12,7 +12,7 @@
  * 
  * Registers service worker for push notifications.
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import useWebSocket from './hooks/useWebSocket'
 import CameraView from './components/CameraView'
 import DetectionDisplay from './components/DetectionDisplay'
@@ -20,6 +20,22 @@ import EmergencyContact from './components/EmergencyContact'
 
 export default function App() {
   const { isConnected, prediction, sendFrame } = useWebSocket()
+  const [locationUrl, setLocationUrl] = useState(null)
+
+  // Request Geolocation early
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          setLocationUrl(`https://maps.google.com/?q=${lat},${lng}`)
+        },
+        (error) => console.warn("Geolocation denied or failed:", error),
+        { enableHighAccuracy: true }
+      )
+    }
+  }, [])
 
   // Register service worker for push notifications
   useEffect(() => {
@@ -82,7 +98,7 @@ export default function App() {
 
       <div className="bottom-panels">
         <DetectionDisplay prediction={prediction} />
-        <EmergencyContact prediction={prediction} />
+        <EmergencyContact prediction={prediction} locationUrl={locationUrl} />
       </div>
     </div>
   )

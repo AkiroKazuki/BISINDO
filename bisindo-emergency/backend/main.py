@@ -22,6 +22,7 @@ import numpy as np
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 from pydantic import BaseModel
 
 # Load environment variables
@@ -71,6 +72,7 @@ class NotifyRequest(BaseModel):
     gesture: str
     contact_number: str
     user_name: str
+    location_url: Optional[str] = None
 
 
 class PushSubscription(BaseModel):
@@ -162,7 +164,8 @@ async def notify(request: NotifyRequest):
     result = trigger_all_notifications(
         gesture=request.gesture,
         contact_number=request.contact_number,
-        user_name=request.user_name
+        user_name=request.user_name,
+        location_url=request.location_url
     )
 
     return result
@@ -185,6 +188,18 @@ async def vapid_public_key():
         logger.warning("VAPID_PUBLIC_KEY is not configured in .env")
         return {"publicKey": "", "error": "VAPID key not configured"}
     return {"publicKey": VAPID_PUBLIC_KEY}
+
+# --- Mount Static Frontend ---
+# This serves the React build folder so that LocalTunnel can expose 
+# both the Frontend and Backend via a single port (8000).
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+if os.path.exists(frontend_dist):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+    logger.info(f"Mounted static frontend from {frontend_dist}")
+else:
+    logger.warning("Frontend dist not found. Run 'npm run build' in the frontend directory.")
+
 
 
 if __name__ == "__main__":

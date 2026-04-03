@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 const STORAGE_KEY = 'emergency_contacts'
 const NOTIFICATION_COOLDOWN_MS = 12000 // slightly longer than backend's 10s cooldown
 
-export default function EmergencyContact({ prediction }) {
+export default function EmergencyContact({ prediction, locationUrl }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [contacts, setContacts] = useState([])
@@ -70,13 +70,17 @@ export default function EmergencyContact({ prediction }) {
 
     for (const contact of contacts) {
       try {
-        const response = await fetch('http://localhost:8000/notify', {
+        const httpHost = window.location.hostname === 'localhost' ? 'http://localhost:8000' : ''
+        const notifyUrl = `${httpHost}/notify`
+        
+        const response = await fetch(notifyUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             gesture: gesture,
             contact_number: contact.phone,
             user_name: contact.name,
+            location_url: locationUrl // Will be null if denied
           }),
         })
 

@@ -92,13 +92,14 @@ def store_push_subscription(subscription: dict):
 
 # --- SMS via Textbee ---
 
-def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
+def send_sms_textbee(contact_number: str, gesture: str, user_name: str, location_url: str = None) -> Dict:
     """Send SMS via Textbee.dev API.
 
     Args:
         contact_number: Recipient phone number (e.g., "+628xxx").
         gesture: Detected gesture name.
         user_name: Name of the user in distress.
+        location_url: Optional Google Maps URL.
 
     Returns:
         Dict with 'status' and 'detail' keys.
@@ -111,8 +112,10 @@ def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
     message = (
         f"DARURAT: {user_name} membutuhkan bantuan segera.\n"
         f"Isyarat [{gesture}] terdeteksi pada [{timestamp}].\n"
-        f"Hubungi segera."
     )
+    if location_url:
+        message += f"📍 Lokasi Korban: {location_url}\n"
+    message += f"Hubungi segera."
 
     url = f"https://api.textbee.dev/api/v1/gateway/devices/{TEXTBEE_DEVICE_ID}/sendSMS"
     headers = {
@@ -135,7 +138,7 @@ def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
 
 # --- Twilio WhatsApp Message ---
 
-def send_whatsapp_twilio(contact_number: str, gesture: str, user_name: str) -> Dict:
+def send_whatsapp_twilio(contact_number: str, gesture: str, user_name: str, location_url: str = None) -> Dict:
     """Send a WhatsApp message via Twilio.
     Bypasses telecom SMS/VOIP blocking by transmitting over data.
     """
@@ -158,11 +161,18 @@ def send_whatsapp_twilio(contact_number: str, gesture: str, user_name: str) -> D
         
         # Twilio WhatsApp requires 'whatsapp:' prefix
         body = f"🚨 *DARURAT BISINDO*\n\n{user_name} membutuhkan bantuan segera!\nIsyarat terdeteksi: *{gesture}*"
+        if location_url:
+            body += f"\n\n📍 *Lokasi Korban*:\n{location_url}"
+
         
+        # 🛑 DILARANG MENGGANTI THIS LINE! 🛑
+        # You CANNOT use your personal TWILIO_PHONE_NUMBER here on a free trial.
+        # It MUST be the universal Twilio Sandbox Number (+14155238886)
+        # or the specific sandbox number provided in your Twilio Dashboard.
         message = client.messages.create(
             body=body,
             to=f"whatsapp:{contact_number}",
-            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}" if TWILIO_PHONE_NUMBER else "whatsapp:+14155238886"
+            from_="whatsapp:+14155238886"
         )
 
         logger.info(f"Twilio WhatsApp initiated to {contact_number} (SID: {message.sid})")
@@ -172,38 +182,37 @@ def send_whatsapp_twilio(contact_number: str, gesture: str, user_name: str) -> D
         return {"status": "failed", "detail": str(e)}
 
 
-# --- CallMeBot WhatsApp Voice Call ---
+# --- IFTTT VoIP Call ---
 
-CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
+IFTTT_WEBHOOK_KEY = os.getenv("IFTTT_WEBHOOK_KEY")
 
-def make_callmebot_voice_call(contact_number: str, gesture: str, user_name: str) -> Dict:
-    """Make a WhatsApp Voice Call via free CallMeBot API."""
-    if not CALLMEBOT_API_KEY:
-        logger.warning("CallMeBot voice call disabled -- CALLMEBOT_API_KEY not set in .env")
+def make_ifttt_voip_call(gesture: str, user_name: str) -> Dict:
+    """Trigger a free VoIP call to the user's phone via IFTTT Applet."""
+    if not IFTTT_WEBHOOK_KEY:
+        logger.warning("IFTTT VoIP call disabled -- IFTTT_WEBHOOK_KEY not set in .env")
         return {"status": "disabled", "detail": "No API key"}
 
-    if contact_number.startswith("0"):
-        contact_number = "+62" + contact_number[1:]
-
-    # CallMeBot API uses GET request with urlencoded text
-    import urllib.parse
-    text = f"Peringatan Darurat. {user_name} membutuhkan bantuan. Isyarat {gesture} terdeteksi."
-    encoded_text = urllib.parse.quote(text)
+    # Define the event name exactly as configured in the IFTTT applet
+    event_name = "bisindo_emergency"
+    url = f"https://maker.ifttt.com/trigger/{event_name}/with/key/{IFTTT_WEBHOOK_KEY}"
     
-    url = f"https://api.callmebot.com/whatsapp.php?phone={contact_number}&text={encoded_text}&apikey={CALLMEBOT_API_KEY}"
+    payload = {
+        "value1": user_name,
+        "value2": gesture
+    }
     
     try:
-        response = requests.get(url, timeout=10)
-        logger.info(f"CallMeBot initiated to {contact_number}")
+        response = requests.post(url, json=payload, timeout=10)
+        logger.info("IFTTT VoIP Webhook triggered successfully")
         return {"status": "initiated", "detail": response.text}
     except Exception as e:
-        logger.error(f"CallMeBot failed: {e}")
+        logger.error(f"IFTTT VoIP failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
 
 # --- Web Push Notification ---
 
-def send_push_notification(gesture: str, user_name: str) -> Dict:
+def send_push_notification(gesture: str, user_name: str, location_url: str = None) -> Dict:
     """Send Web Push notification to all subscribed browsers.
 
     Args:
@@ -224,11 +233,19 @@ def send_push_notification(gesture: str, user_name: str) -> Dict:
     try:
         from pywebpush import webpush, WebPushException
 
-        data = json.dumps({
+        body_text = f"{user_name} membutuhkan bantuan -- isyarat {gesture} terdeteksi"
+        if location_url:
+            body_text += " (Lokasi terlampir)"
+
+        data = {
             "title": "DARURAT",
-            "body": f"{user_name} membutuhkan bantuan -- isyarat {gesture} terdeteksi",
+            "body": body_text,
             "icon": "/icon.png"
-        })
+        }
+        if location_url:
+            data["url"] = location_url
+
+        data_json = json.dumps(data)
 
         vapid_claims = {"sub": VAPID_MAILTO}
         sent_count = 0
@@ -237,7 +254,7 @@ def send_push_notification(gesture: str, user_name: str) -> Dict:
             try:
                 webpush(
                     subscription_info=subscription,
-                    data=data,
+                    data=data_json,
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims=vapid_claims
                 )
@@ -255,22 +272,23 @@ def send_push_notification(gesture: str, user_name: str) -> Dict:
 # --- Unified notification trigger ---
 
 def trigger_all_notifications(gesture: str, contact_number: str,
-                              user_name: str) -> Dict:
+                              user_name: str, location_url: str = None) -> Dict:
     """Trigger all notification channels.
 
     Args:
         gesture: Detected gesture name.
         contact_number: Emergency contact phone number.
         user_name: Name of the user in distress.
+        location_url: Optional Google Maps URL.
 
     Returns:
         Dict with status for each notification channel.
     """
     result = {
-        "sms_status": send_sms_textbee(contact_number, gesture, user_name),
-        "twilio_wa_status": send_whatsapp_twilio(contact_number, gesture, user_name),
-        "callmebot_status": make_callmebot_voice_call(contact_number, gesture, user_name),
-        "push_status": send_push_notification(gesture, user_name),
+        "sms_status": send_sms_textbee(contact_number, gesture, user_name, location_url),
+        "twilio_wa_status": send_whatsapp_twilio(contact_number, gesture, user_name, location_url),
+        "ifttt_voip_status": make_ifttt_voip_call(gesture, user_name),
+        "push_status": send_push_notification(gesture, user_name, location_url),
     }
 
     logger.info(f"All notifications triggered for gesture: {gesture}")

@@ -6,7 +6,12 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-const WS_URL = 'ws://localhost:8000/ws'
+// Determine WebSocket protocol (wss for https, ws for http)
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+// If on localhost (even on port 5173 dev server), point to backend port 8000. Else, use the current host.
+const wsHost = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host
+const WS_URL = `${wsProtocol}//${wsHost}/ws`
+
 const RECONNECT_DELAY = 3000 // 3 seconds
 
 export default function useWebSocket() {
