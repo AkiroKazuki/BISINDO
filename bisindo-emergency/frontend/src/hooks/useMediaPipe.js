@@ -16,9 +16,12 @@ export default function useMediaPipe(videoRef, onResults) {
   const landmarkerRef = useRef(null)
   const animationRef = useRef(null)
   const lastVideoTimeRef = useRef(-1)
+  const framesWithoutHandsRef = useRef(0)
 
   const extractKeypoints = useCallback((result) => {
     const keypoints = new Array(TOTAL)
+    let distanceWarning = null
+    let hasHands = false
 
     // Pose landmarks (0-32)
     const pose = result.poseLandmarks?.[0]
@@ -30,9 +33,24 @@ export default function useMediaPipe(videoRef, onResults) {
       }
     }
 
+    // Distance computation based on shoulders (indices 11 and 12)
+    if (pose && pose[11] && pose[12]) {
+      const dist = Math.sqrt(
+        Math.pow(pose[11].x - pose[12].x, 2) + 
+        Math.pow(pose[11].y - pose[12].y, 2)
+      )
+      // Thresholds: > 0.6 is too close, < 0.2 is too far
+      if (dist > 0.6) {
+        distanceWarning = "Posisi terlalu dekat, silakan mundur."
+      } else if (dist < 0.2) {
+        distanceWarning = "Posisi terlalu jauh, silakan mendekat."
+      }
+    }
+
     // Left hand landmarks (33-53)
     const leftHand = result.leftHandLandmarks?.[0]
     if (leftHand && leftHand.length > 0) {
+      hasHands = true
       for (let i = 0; i < NUM_HAND; i++) {
         const p = leftHand[i]
         cachedLeftHand[i] = [p.x, p.y, p.z]
@@ -45,6 +63,7 @@ export default function useMediaPipe(videoRef, onResults) {
     // Right hand landmarks (54-74)
     const rightHand = result.rightHandLandmarks?.[0]
     if (rightHand && rightHand.length > 0) {
+      hasHands = true
       for (let i = 0; i < NUM_HAND; i++) {
         const p = rightHand[i]
         cachedRightHand[i] = [p.x, p.y, p.z]
@@ -54,7 +73,17 @@ export default function useMediaPipe(videoRef, onResults) {
       keypoints[NUM_POSE + NUM_HAND + i] = cachedRightHand[i]
     }
 
-    return keypoints
+    // Idle tracking
+    if (!hasHands) {
+      framesWithoutHandsRef.current += 1
+    } else {
+      framesWithoutHandsRef.current = 0
+    }
+    
+    // If no hands detected for 30 consecutive frames (approx 1 second), consider idle
+    const isIdle = framesWithoutHandsRef.current > 30
+
+    return { keypoints, metadata: { isIdle, distanceWarning } }
   }, [])
 
   useEffect(() => {
@@ -129,10 +158,11 @@ export default function useMediaPipe(videoRef, onResults) {
                       }
                     }
                     
-                    const keypoints = extractKeypoints(result)
+                    const { keypoints, metadata } = extractKeypoints(result)
                     if (onResults) {
-                      // Pass raw results for skeleton overlay drawing
+                      // Pass raw results for skeleton overlay drawing, plus our rich metadata
                       onResults(keypoints, {
+                        ...metadata,
                         poseLandmarks: result.poseLandmarks?.[0] || [],
                         leftHandLandmarks: result.leftHandLandmarks?.[0] || [],
                         rightHandLandmarks: result.rightHandLandmarks?.[0] || []

@@ -109,8 +109,8 @@ class InferencePipeline:
         # Normalize using shared normalization
         normalized = normalize_shoulder_center(keypoints)
 
-        # Add to buffer
-        should_infer = self.buffer.add_frame(normalized)
+        # Add to buffer (store both normalized and raw for motion detection)
+        should_infer = self.buffer.add_frame(normalized, keypoints)
 
         result = {
             'class': None,
@@ -129,14 +129,15 @@ class InferencePipeline:
             return result
 
         # Check for sufficient hand/arm movement before inference
-        window = self.buffer.get_window()
-        if not self.motion_detector.has_sufficient_motion(window):
+        # We MUST check motion on RAW keypoints to prevent normalization jitter
+        raw_window = self.buffer.get_raw_window()
+        if not self.motion_detector.has_sufficient_motion(raw_window):
             # User is idle — do NOT force a class prediction
             result['class'] = None
             result['confidence'] = 0.0
             return result
 
-        # Run inference
+        # Run inference using normalized window
         class_name, confidence = self._infer()
 
         # Add to confirmation tracker

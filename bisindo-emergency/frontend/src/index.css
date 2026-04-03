@@ -128,23 +128,30 @@ body {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: #000;
+  background: var(--bg-card); /* Match card background */
+  background-image: radial-gradient(circle at center, rgba(30,30,40,0.8) 0%, #000 100%);
   border: 1px solid var(--border-subtle);
+  display: flex; /* Center the contain video */
+  align-items: center;
+  justify-content: center;
 }
 
 .camera-section video {
-  width: 100%;
+  width: auto;
   height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  aspect-ratio: 3/4; /* Match our 480x640 constraint */
+  object-fit: contain; /* DO NOT USE COVER: it chops off hands! */
   display: block;
 }
 
 .camera-section canvas {
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   height: 100%;
+  aspect-ratio: 3/4;
   pointer-events: none;
 }
 

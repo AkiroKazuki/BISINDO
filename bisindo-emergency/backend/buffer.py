@@ -25,19 +25,21 @@ class SlidingWindowBuffer:
         """
         self.window_size = window_size
         self.stride = stride
+        # Buffer stores tuples of: (normalized_keypoints, raw_keypoints)
         self.buffer = deque(maxlen=window_size)
         self.frame_count = 0
 
-    def add_frame(self, keypoints) -> bool:
+    def add_frame(self, normalized_keypoints, raw_keypoints=None) -> bool:
         """Add a frame and check if inference should be triggered.
 
         Args:
-            keypoints: Array of shape (75, 3) for a single frame.
+            normalized_keypoints: Array of shape (75, 3) normalized for ST-GCN.
+            raw_keypoints: Array of shape (75, 3) representing physical screen coordinates.
 
         Returns:
             True if inference should be triggered, False otherwise.
         """
-        self.buffer.append(keypoints)
+        self.buffer.append((normalized_keypoints, raw_keypoints))
         self.frame_count += 1
 
         should_infer = (
@@ -48,12 +50,20 @@ class SlidingWindowBuffer:
         return should_infer
 
     def get_window(self) -> list:
-        """Get the current window of frames.
+        """Get the current window of NORMALIZED frames.
 
         Returns:
-            List of keypoint arrays (each (75, 3)), length = window_size.
+            List of normalized keypoint arrays (each (75, 3)), length = window_size.
         """
-        return list(self.buffer)
+        return [norm for norm, _ in self.buffer]
+    
+    def get_raw_window(self) -> list:
+        """Get the current window of RAW frames for motion detection.
+
+        Returns:
+            List of raw keypoint arrays (each (75, 3)), length = window_size.
+        """
+        return [raw for _, raw in self.buffer]
 
     def is_full(self) -> bool:
         """Check if buffer has collected enough frames."""

@@ -59,33 +59,27 @@ _check_and_warn()
 
 # --- Rate limiting ---
 
-class RateLimiter:
-    """Simple rate limiter for voice calls.
-
-    Prevents spam: only trigger voice call if the same gesture
-    is confirmed > 3 times in 30 seconds.
+class ConsecutiveTriggerLimiter:
+    """Requires N consecutive hits within a time window to trigger.
+    
+    This acts as a high-confidence threshold for critical alerts like Voice Calls.
     """
-
-    def __init__(self, max_triggers: int = 3, window_seconds: float = 30.0):
-        self.max_triggers = max_triggers
+    def __init__(self, required_hits: int = 2, window_seconds: float = 60.0):
+        self.required_hits = required_hits
         self.window_seconds = window_seconds
         self.history: List[float] = []
 
     def should_trigger(self) -> bool:
-        """Check if a voice call should be triggered."""
         now = time.time()
-        # Remove old entries
         self.history = [t for t in self.history if now - t < self.window_seconds]
         self.history.append(now)
+        # Only trigger when we strictly reach the required hits
+        return len(self.history) >= self.required_hits
 
-        return len(self.history) > self.max_triggers
+voice_rate_limiter = ConsecutiveTriggerLimiter(required_hits=2, window_seconds=60.0)
 
-
-voice_rate_limiter = RateLimiter(max_triggers=3, window_seconds=30.0)
-
-# --- Push subscription storage ---
+# --- Web Push subscription storage ---
 push_subscriptions: List[dict] = []
-
 
 def store_push_subscription(subscription: dict):
     """Store a Web Push subscription from the browser."""
@@ -95,7 +89,6 @@ def store_push_subscription(subscription: dict):
             return
     push_subscriptions.append(subscription)
     logger.info(f"Push subscription stored (total: {len(push_subscriptions)})")
-
 
 # --- SMS via Textbee ---
 
@@ -140,51 +133,71 @@ def send_sms_textbee(contact_number: str, gesture: str, user_name: str) -> Dict:
         logger.error(f"SMS failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
+# --- Twilio WhatsApp Message ---
 
-# --- Voice Call via Twilio ---
-
-def make_voice_call(contact_number: str, gesture: str, user_name: str) -> Dict:
-    """Make a voice call via Twilio.
-
-    Rate-limited: only triggers if same gesture confirmed >3 times in 30s.
-
-    Args:
-        contact_number: Recipient phone number.
-        gesture: Detected gesture name.
-        user_name: Name of the user in distress.
-
-    Returns:
-        Dict with 'status' and 'detail' keys.
+def send_whatsapp_twilio(contact_number: str, gesture: str, user_name: str) -> Dict:
+    """Send a WhatsApp message via Twilio.
+    Bypasses telecom SMS/VOIP blocking by transmitting over data.
     """
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
-        logger.warning("Voice call not made -- Twilio credentials not configured")
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        logger.warning("WhatsApp not sent -- Twilio credentials not configured")
         return {"status": "disabled", "detail": "Twilio credentials not set"}
 
-    # Rate limiting
+    # Format local numbers to E.164
+    if contact_number.startswith("0"):
+        contact_number = "+62" + contact_number[1:]
+
+    # Require multiple confirmation triggers within 60s for high-confidence alert
     if not voice_rate_limiter.should_trigger():
-        return {"status": "rate_limited", "detail": "Not enough repeated confirmations"}
+        logger.info("WhatsApp deferred -- waiting for 2nd confirmation to prevent false alarms.")
+        return {"status": "rate_limited", "detail": "Waiting for 2nd confirmation within 60s"}
 
     try:
         from twilio.rest import Client
-
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        twiml = (
-            f'<Response>'
-            f'<Say language="id-ID">Peringatan darurat. {user_name} membutuhkan bantuan segera. '
-            f'Isyarat {gesture} terdeteksi.</Say>'
-            f'</Response>'
+        
+        # Twilio WhatsApp requires 'whatsapp:' prefix
+        body = f"🚨 *DARURAT BISINDO*\n\n{user_name} membutuhkan bantuan segera!\nIsyarat terdeteksi: *{gesture}*"
+        
+        message = client.messages.create(
+            body=body,
+            to=f"whatsapp:{contact_number}",
+            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}" if TWILIO_PHONE_NUMBER else "whatsapp:+14155238886"
         )
 
-        call = client.calls.create(
-            twiml=twiml,
-            to=contact_number,
-            from_=TWILIO_PHONE_NUMBER
-        )
-
-        logger.info(f"Voice call initiated to {contact_number} (SID: {call.sid})")
-        return {"status": "initiated", "detail": {"sid": call.sid}}
+        logger.info(f"Twilio WhatsApp initiated to {contact_number} (SID: {message.sid})")
+        return {"status": "sent", "detail": {"sid": message.sid}}
     except Exception as e:
-        logger.error(f"Voice call failed: {e}")
+        logger.error(f"Twilio WhatsApp failed: {e}")
+        return {"status": "failed", "detail": str(e)}
+
+
+# --- CallMeBot WhatsApp Voice Call ---
+
+CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
+
+def make_callmebot_voice_call(contact_number: str, gesture: str, user_name: str) -> Dict:
+    """Make a WhatsApp Voice Call via free CallMeBot API."""
+    if not CALLMEBOT_API_KEY:
+        logger.warning("CallMeBot voice call disabled -- CALLMEBOT_API_KEY not set in .env")
+        return {"status": "disabled", "detail": "No API key"}
+
+    if contact_number.startswith("0"):
+        contact_number = "+62" + contact_number[1:]
+
+    # CallMeBot API uses GET request with urlencoded text
+    import urllib.parse
+    text = f"Peringatan Darurat. {user_name} membutuhkan bantuan. Isyarat {gesture} terdeteksi."
+    encoded_text = urllib.parse.quote(text)
+    
+    url = f"https://api.callmebot.com/whatsapp.php?phone={contact_number}&text={encoded_text}&apikey={CALLMEBOT_API_KEY}"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        logger.info(f"CallMeBot initiated to {contact_number}")
+        return {"status": "initiated", "detail": response.text}
+    except Exception as e:
+        logger.error(f"CallMeBot failed: {e}")
         return {"status": "failed", "detail": str(e)}
 
 
@@ -255,7 +268,8 @@ def trigger_all_notifications(gesture: str, contact_number: str,
     """
     result = {
         "sms_status": send_sms_textbee(contact_number, gesture, user_name),
-        "call_status": make_voice_call(contact_number, gesture, user_name),
+        "twilio_wa_status": send_whatsapp_twilio(contact_number, gesture, user_name),
+        "callmebot_status": make_callmebot_voice_call(contact_number, gesture, user_name),
         "push_status": send_push_notification(gesture, user_name),
     }
 
